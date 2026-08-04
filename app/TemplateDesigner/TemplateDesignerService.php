@@ -311,6 +311,8 @@ final class TemplateDesignerService
             'organization.website' => htmlspecialchars((string) ($organization['website'] ?? 'https://ndc.edu'), ENT_QUOTES, 'UTF-8'),
             'card.qr_code' => '<div style="display:inline-flex;align-items:center;justify-content:center;width:90px;height:90px;border:2px dashed #999;font-size:11px;color:#666;">QR</div>',
             'card.barcode' => '<div style="display:inline-flex;align-items:center;justify-content:center;width:140px;height:44px;border:2px dashed #999;font-size:11px;color:#666;">Barcode</div>',
+            'authorized.signature' => $this->authorizedSignatureHtml($organization['authorized_signature_path'] ?? ''),
+            'authorized.name' => htmlspecialchars((string) ($organization['authorized_name'] ?? 'Authorized Officer'), ENT_QUOTES, 'UTF-8'),
             'card.serial_number' => htmlspecialchars((string) ($student['student_number'] ?? 'N/A'), ENT_QUOTES, 'UTF-8'),
             'card.verification_code' => htmlspecialchars((string) ($student['student_number'] ?? 'N/A'), ENT_QUOTES, 'UTF-8'),
             'authorized.signature' => '<div style="display:inline-block;width:140px;height:44px;border-bottom:2px solid #111;padding-top:24px;text-align:center;font-size:12px;color:#111;">Authorized</div>',
@@ -343,34 +345,65 @@ final class TemplateDesignerService
     public function defaultFrontHtml(): string
     {
         return <<<'HTML'
-<div style="width:100%;min-height:100%;padding:24px;background-image:url('{{template.front_background}}');background-size:cover;background-position:center;background-repeat:no-repeat;color:#111;font-family:Arial,sans-serif;">
-  <div style="display:flex;justify-content:space-between;align-items:center;padding:16px 18px;border-bottom:2px solid {{theme.accent_color}};background:rgba(255,255,255,0.92);">
-    <div>
-      <div style="font-size:12px;letter-spacing:2px;text-transform:uppercase;color:{{theme.primary_color}};">{{organization.name}}</div>
-      <div style="font-size:14px;color:#333;">{{organization.address}}</div>
+<div style="width:100%;min-height:100%;padding:10px;background-image:url('{{template.front_background}}');background-size:cover;background-position:center;color:#111;font-family:Arial,sans-serif;box-sizing:border-box;">
+  <div style="width:100%;height:100%;background:rgba(255,255,255,0.96);border-radius:14px;display:grid;grid-template-rows:auto 1fr auto;gap:8px;padding:10px;box-sizing:border-box;overflow:hidden;">
+    <div style="display:flex;align-items:center;gap:10px;padding-bottom:4px;border-bottom:1px solid #d9dce0;">
+      <img src="{{organization.logo}}" alt="Logo" style="width:54px;height:54px;object-fit:contain;">
+      <div>
+        <div style="font-size:10px;text-transform:uppercase;letter-spacing:1px;color:#555;">{{organization.name}}</div>
+        <div style="font-size:12px;font-weight:700;color:#111;">Student Identity Card</div>
+      </div>
     </div>
-    <img src="{{organization.logo}}" alt="Organization logo" style="max-height:54px;max-width:110px;">
-  </div>
-  <div style="display:flex;gap:18px;padding:20px;align-items:center;">
-    <div style="width:122px;height:146px;border:3px solid {{theme.primary_color}};overflow:hidden;background:#fff;display:flex;align-items:center;justify-content:center;">
-      <img src="{{student.photo}}" alt="Student photo" style="width:100%;height:100%;object-fit:cover;">
+    <div style="display:grid;grid-template-columns:100px 1fr;gap:10px;align-items:start;">
+      <div style="width:100px;height:130px;border:2px solid #d1d5db;border-radius:10px;overflow:hidden;background:#f7f7f7;display:flex;align-items:center;justify-content:center;">
+        <img src="{{student.photo}}" alt="Student photo" style="width:100%;height:100%;object-fit:cover;">
+      </div>
+      <div style="display:grid;grid-template-rows:auto auto 1fr;gap:8px;">
+        <div>
+          <div style="font-size:8px;text-transform:uppercase;letter-spacing:1px;color:#666;">Name</div>
+          <div style="font-size:18px;font-weight:700;line-height:1.1;color:#111;">{{student.full_name}}</div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:10px;color:#333;">
+          <div>
+            <div style="font-size:8px;text-transform:uppercase;letter-spacing:1px;color:#666;">Student ID</div>
+            <div>{{student.student_id}}</div>
+          </div>
+          <div>
+            <div style="font-size:8px;text-transform:uppercase;letter-spacing:1px;color:#666;">Valid</div>
+            <div style="font-weight:700;color:{{theme.primary_color}};">{{student.issue_date}} – {{student.expiry_date}}</div>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:10px;color:#333;">
+          <div>
+            <div style="font-size:8px;text-transform:uppercase;letter-spacing:1px;color:#666;">Program</div>
+            <div>{{student.program}}</div>
+          </div>
+          <div>
+            <div style="font-size:8px;text-transform:uppercase;letter-spacing:1px;color:#666;">Department</div>
+            <div>{{student.department}}</div>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:10px;color:#333;">
+          <div>
+            <div style="font-size:8px;text-transform:uppercase;letter-spacing:1px;color:#666;">Gender</div>
+            <div>{{student.gender}}</div>
+          </div>
+          <div>
+            <div style="font-size:8px;text-transform:uppercase;letter-spacing:1px;color:#666;">Qualification</div>
+            <div>{{student.qualification}}</div>
+          </div>
+        </div>
+      </div>
     </div>
-    <div style="flex:1;">
-      <h2 style="margin:0 0 8px;font-size:24px;color:{{theme.primary_color}};">{{student.full_name}}</h2>
-      <p style="margin:4px 0;font-size:14px;"><strong>Student ID:</strong> {{student.student_id}}</p>
-      <p style="margin:4px 0;font-size:14px;"><strong>Program:</strong> {{student.program}}</p>
-      <p style="margin:4px 0;font-size:14px;"><strong>Department:</strong> {{student.department}}</p>
-      <p style="margin:4px 0;font-size:14px;"><strong>Status:</strong> {{student.status}}</p>
-    </div>
-  </div>
-  <div style="display:flex;justify-content:space-between;align-items:center;padding:0 20px 20px;">
-    <div style="text-align:center;">
-      <div style="font-size:12px;color:#666;">Verification</div>
-      <div style="margin-top:6px;">{{card.qr_code}}</div>
-    </div>
-    <div style="text-align:center;">
-      <div style="font-size:12px;color:#666;">Authorized</div>
-      <div style="margin-top:6px;">{{authorized.signature}}</div>
+    <div style="display:grid;grid-template-columns:1fr auto;align-items:center;gap:10px;padding-top:6px;border-top:1px solid #d9dce0;">
+      <div style="display:flex;align-items:center;gap:10px;font-size:9px;color:#666;text-transform:uppercase;letter-spacing:1px;">
+        <span>Verification</span>
+        <span>{{card.qr_code}}</span>
+      </div>
+      <div style="text-align:right;">
+        <div style="font-size:8px;text-transform:uppercase;letter-spacing:1px;color:#666;">Status</div>
+        <div style="display:inline-block;padding:4px 10px;border-radius:999px;background:{{theme.primary_color}};color:#fff;font-size:10px;font-weight:700;">VALID</div>
+      </div>
     </div>
   </div>
 </div>
@@ -380,28 +413,33 @@ HTML;
     public function defaultBackHtml(): string
     {
         return <<<'HTML'
-<div style="width:100%;min-height:100%;padding:24px;background-image:url('{{template.back_background}}');background-size:cover;background-position:center;background-repeat:no-repeat;color:#111;font-family:Arial,sans-serif;">
-  <div style="padding:18px;border:2px solid {{theme.secondary_color}};background:rgba(255,255,255,0.95);">
-    <h3 style="margin:0 0 12px;font-size:20px;color:{{theme.secondary_color}};">Institution Details</h3>
-    <p style="margin:4px 0;font-size:14px;"><strong>Name:</strong> {{organization.name}}</p>
-    <p style="margin:4px 0;font-size:14px;"><strong>Address:</strong> {{organization.address}}</p>
-    <p style="margin:4px 0;font-size:14px;"><strong>Phone:</strong> {{organization.phone}}</p>
-    <p style="margin:4px 0;font-size:14px;"><strong>Email:</strong> {{organization.email}}</p>
-    <p style="margin:4px 0;font-size:14px;"><strong>Website:</strong> {{organization.website}}</p>
-  </div>
-  <div style="display:flex;justify-content:space-between;align-items:flex-end;padding-top:18px;">
-    <div>
-      <div style="font-size:12px;color:#666;">Student Signature</div>
-      <div style="margin-top:6px;">{{student.signature}}</div>
-    </div>
+<div style="width:100%;min-height:100%;padding:8px;background-image:url('{{template.back_background}}');background-size:cover;background-position:center;color:#111;font-family:Arial,sans-serif;box-sizing:border-box;">
+  <div style="width:100%;height:100%;background:rgba(255,255,255,0.96);border-radius:14px;display:grid;grid-template-rows:auto 1fr auto;gap:10px;padding:10px;box-sizing:border-box;overflow:hidden;">
     <div style="text-align:center;">
-      <div style="font-size:12px;color:#666;">Barcode</div>
-      <div style="margin-top:6px;">{{card.barcode}}</div>
+      <div style="font-size:10px;text-transform:uppercase;letter-spacing:1px;color:{{theme.secondary_color}};font-weight:700;">Important</div>
+      <div style="font-size:11px;font-weight:700;color:#111;">Return if found</div>
     </div>
-  </div>
-  <div style="margin-top:20px;padding:14px;background:rgba(255,255,255,0.9);border-top:2px solid {{theme.accent_color}};">
-    <p style="margin:0;font-size:13px;">Issued: {{student.issue_date}} &nbsp;|&nbsp; Expires: {{student.expiry_date}}</p>
-    <p style="margin:6px 0 0;font-size:13px;">Authorized by {{authorized.name}}</p>
+    <div style="display:grid;gap:6px;font-size:10px;color:#333;line-height:1.4;">
+      <p style="margin:0;">This card remains property of {{organization.name}}.</p>
+      <p style="margin:0;">Return if found to:</p>
+      <p style="margin:0;font-weight:700;">{{organization.name}}</p>
+      <p style="margin:0;">{{organization.address}}</p>
+      <p style="margin:0;">Email: {{organization.email}}</p>
+      <p style="margin:0;">Phone: {{organization.phone}}</p>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr auto;align-items:end;gap:10px;">
+      <div style="display:grid;gap:8px;font-size:10px;color:#333;">
+        <div style="font-size:9px;text-transform:uppercase;letter-spacing:1px;color:#666;">Authorized signature</div>
+        <div style="height:42px;border-bottom:1px solid #111;"></div>
+        <div style="font-size:11px;font-weight:700;">{{authorized.name}}</div>
+      </div>
+      <div style="display:grid;gap:8px;text-align:center;font-size:9px;color:#666;">
+        <div>Verification QR</div>
+        <div>{{card.qr_code}}</div>
+        <div>Barcode</div>
+        <div>{{card.barcode}}</div>
+      </div>
+    </div>
   </div>
 </div>
 HTML;
@@ -566,13 +604,18 @@ HTML;
             return 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==';
         }
 
-        $absolutePath = dirname(__DIR__, 2) . DIRECTORY_SEPARATOR . ltrim($path, DIRECTORY_SEPARATOR);
-        if (!is_file($absolutePath)) {
+        if (preg_match('#^(data:|https?://)#i', $path)) {
+            return $path;
+        }
+
+        $resolvedPath = $this->imagePath($path);
+        if ($resolvedPath === null || !is_file($resolvedPath)) {
             return 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==';
         }
 
-        $data = base64_encode((string) file_get_contents($absolutePath));
-        return 'data:image/png;base64,' . $data;
+        $mimeType = mime_content_type($resolvedPath) ?: 'image/png';
+        $data = base64_encode((string) file_get_contents($resolvedPath));
+        return 'data:' . $mimeType . ';base64,' . $data;
     }
 
     public function renderBackgroundImageTag(?string $path): string
@@ -581,13 +624,18 @@ HTML;
             return '';
         }
 
-        $absolutePath = dirname(__DIR__, 2) . DIRECTORY_SEPARATOR . ltrim($path, DIRECTORY_SEPARATOR);
-        if (!is_file($absolutePath)) {
+        if (preg_match('#^(data:|https?://)#i', $path)) {
+            return $path;
+        }
+
+        $resolvedPath = $this->imagePath($path);
+        if ($resolvedPath === null || !is_file($resolvedPath)) {
             return '';
         }
 
-        $data = base64_encode((string) file_get_contents($absolutePath));
-        return 'data:image/png;base64,' . $data;
+        $mimeType = mime_content_type($resolvedPath) ?: 'image/png';
+        $data = base64_encode((string) file_get_contents($resolvedPath));
+        return 'data:' . $mimeType . ';base64,' . $data;
     }
 
     private function relativePath(string $absolutePath): string
@@ -605,12 +653,37 @@ HTML;
 
     private function imagePath(string $path): ?string
     {
+        $path = trim($path);
         if ($path === '') {
             return null;
         }
 
-        $absolutePath = dirname(__DIR__, 2) . DIRECTORY_SEPARATOR . ltrim($path, DIRECTORY_SEPARATOR);
-        return is_file($absolutePath) ? str_replace('\\', '/', $this->relativePath($absolutePath)) : null;
+        if (preg_match('#^(data:|https?://)#i', $path)) {
+            return $path;
+        }
+
+        $normalized = str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $path);
+        if (preg_match('~^[A-Za-z]:\\\\~', $normalized) || str_starts_with($normalized, DIRECTORY_SEPARATOR)) {
+            return is_file($normalized) ? $normalized : null;
+        }
+
+        $absolutePath = dirname(__DIR__, 2) . DIRECTORY_SEPARATOR . ltrim($normalized, DIRECTORY_SEPARATOR);
+        return is_file($absolutePath) ? $absolutePath : null;
+    }
+
+    private function authorizedSignatureHtml(?string $path): string
+    {
+        $imagePath = $this->imagePath($path ?? '');
+        if ($imagePath === null) {
+            return '<div style="display:inline-block;width:140px;height:44px;border-bottom:2px solid #111;padding-top:24px;text-align:center;font-size:12px;color:#111;">Authorized</div>';
+        }
+
+        $imageTag = $this->renderImageTag($imagePath, 'Authorized signature');
+        if (str_starts_with($imageTag, 'data:image/gif;base64')) {
+            return '<div style="display:inline-block;width:140px;height:44px;border-bottom:2px solid #111;padding-top:24px;text-align:center;font-size:12px;color:#111;">Authorized</div>';
+        }
+
+        return '<img src="' . htmlspecialchars($imageTag, ENT_QUOTES, 'UTF-8') . '" alt="Authorized signature" style="max-width:140px;max-height:44px;object-fit:contain;">';
     }
 
     private function validateHtml(string $html, string $side): array

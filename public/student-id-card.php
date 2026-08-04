@@ -1,12 +1,14 @@
 <?php
 require_once __DIR__ . '/../app/Database.php';
 require_once __DIR__ . '/../app/StudentRepository.php';
+require_once __DIR__ . '/../app/SettingsRepository.php';
 require_once __DIR__ . '/../app/TemplateDesigner/TemplateDesignerService.php';
 
 $id = isset($_GET['id']) ? (int) $_GET['id'] : 0;
 
 $service = new TemplateDesignerService();
 $repository = new StudentRepository(Database::getConnection());
+$settingsRepository = new SettingsRepository(Database::getConnection());
 
 $message = '';
 $messageType = 'success';
@@ -50,14 +52,16 @@ try {
         }
 
         $student['full_name'] = trim((string) ($student['first_name'] ?? '') . ' ' . (string) ($student['last_name'] ?? ''));
+        $appSettings = $settingsRepository->getAll();
         $organization = [
-            'name' => 'NDC',
-            'address' => 'Ntcheu',
-            'phone' => '+265 999 000 000',
-            'email' => 'info@ndc.edu',
-            'website' => 'https://ndc.edu',
-            'logo_path' => '',
-            'authorized_name' => 'Authorized Officer',
+            'name' => $appSettings['organization_name'] ?? 'NDC',
+            'address' => $appSettings['organization_address'] ?? 'Ntcheu',
+            'phone' => $appSettings['organization_phone'] ?? '+265 999 000 000',
+            'email' => $appSettings['organization_email'] ?? 'info@ndc.edu',
+            'website' => $appSettings['organization_website'] ?? 'https://ndc.edu',
+            'logo_path' => $appSettings['organization_logo_path'] ?? '',
+            'authorized_name' => $appSettings['principal_signature_name'] ?? $appSettings['authorized_name'] ?? 'Authorized Officer',
+            'authorized_signature_path' => $appSettings['principal_signature_path'] ?? $appSettings['authorized_signature_path'] ?? '',
         ];
         $theme = [
             'primary_color' => '#0b5ed7',

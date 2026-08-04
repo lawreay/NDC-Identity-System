@@ -1,4 +1,6 @@
 <?php
+require_once __DIR__ . '/../app/Database.php';
+require_once __DIR__ . '/../app/SettingsRepository.php';
 require_once __DIR__ . '/../app/TemplateDesigner/TemplateDesignerService.php';
 
 $service = new TemplateDesignerService();
@@ -100,6 +102,11 @@ if (isset($_GET['preview']) && is_string($_GET['preview']) && $_GET['preview'] !
 
 $templates = $service->listTemplates();
 $defaultTemplateId = $service->getDefaultTemplateId();
+
+require_once __DIR__ . '/../app/SettingsRepository.php';
+$settingsRepository = new SettingsRepository(Database::getConnection());
+$appSettings = $settingsRepository->getAll();
+
 $student = [
     'full_name' => 'Moses Banda',
     'student_number' => 'BND001',
@@ -114,13 +121,14 @@ $student = [
     'expiry_date' => '2027-01-20',
 ];
 $organization = [
-    'name' => 'NDC',
-    'address' => 'Ntcheu',
-    'phone' => '+265 999 000 000',
-    'email' => 'info@ndc.edu',
-    'website' => 'https://ndc.edu',
-    'logo_path' => '',
-    'authorized_name' => 'Authorized Officer',
+    'name' => $appSettings['organization_name'] ?? 'NDC',
+    'address' => $appSettings['organization_address'] ?? 'Ntcheu',
+    'phone' => $appSettings['organization_phone'] ?? '+265 999 000 000',
+    'email' => $appSettings['organization_email'] ?? 'info@ndc.edu',
+    'website' => $appSettings['organization_website'] ?? 'https://ndc.edu',
+    'logo_path' => $appSettings['organization_logo_path'] ?? '',
+    'authorized_name' => $appSettings['principal_signature_name'] ?? $appSettings['authorized_name'] ?? 'Authorized Officer',
+    'authorized_signature_path' => $appSettings['principal_signature_path'] ?? $appSettings['authorized_signature_path'] ?? '',
 ];
 $theme = [
     'primary_color' => '#0b5ed7',
@@ -193,7 +201,10 @@ if ($template !== null && is_array($template)) {
                     <h2 class="h5 mb-1">Templates</h2>
                     <p class="text-muted mb-0">Manage unlimited front and back card layouts without changing source code.</p>
                 </div>
-                <a href="template-designer.php?edit=new" class="btn btn-primary">Create New Template</a>
+                <div class="btn-group" role="group">
+                    <a href="settings.php" class="btn btn-outline-secondary">Settings</a>
+                    <a href="template-designer.php?edit=new" class="btn btn-primary">Create New Template</a>
+                </div>
             </div>
         </div>
 
