@@ -16,22 +16,42 @@ try {
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $id > 0) {
-    if (isset($_FILES['photo']) && is_uploaded_file($_FILES['photo']['tmp_name'])) {
-        $allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'];
-        $file = $_FILES['photo'];
+    $file = $_FILES['photo'] ?? [];
+    $hasSelectedFile = is_array($file) && !empty($file['name']) && (($file['size'] ?? 0) > 0);
 
-        if (!in_array($file['type'], $allowedTypes, true)) {
-            $uploadMessage = 'Only PNG, JPG, and WebP images are allowed.';
+    if ($hasSelectedFile) {
+        $allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'];
+        $extension = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+        $allowedExtensions = ['png', 'jpg', 'jpeg', 'webp'];
+        $mimeType = strtolower($file['type'] ?? '');
+        $isAccepted = in_array($mimeType, $allowedTypes, true) || in_array($extension, $allowedExtensions, true);
+
+        if (!$isAccepted) {
+            $uploadMessage = 'Only PNG, JPG, JPEG, and WebP images are allowed.';
             $uploadType = 'danger';
-        } elseif ($file['error'] !== UPLOAD_ERR_OK) {
+        } elseif (($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
             $uploadMessage = 'The upload failed. Please try again.';
             $uploadType = 'danger';
         } else {
-            $extension = pathinfo($file['name'], PATHINFO_EXTENSION);
+            $tmpPath = $file['tmp_name'] ?? '';
             $filename = 'student_' . $id . '_' . time() . '.' . strtolower($extension);
-            $destination = __DIR__ . '/uploads/student_photos/' . $filename;
+            $destinationDir = __DIR__ . '/uploads/student_photos';
+            $destination = $destinationDir . '/' . $filename;
 
-            if (!move_uploaded_file($file['tmp_name'], $destination)) {
+            if (!is_dir($destinationDir)) {
+                mkdir($destinationDir, 0777, true);
+            }
+
+            $saved = false;
+            if (is_string($tmpPath) && $tmpPath !== '' && file_exists($tmpPath)) {
+                if (is_uploaded_file($tmpPath)) {
+                    $saved = move_uploaded_file($tmpPath, $destination);
+                } else {
+                    $saved = copy($tmpPath, $destination);
+                }
+            }
+
+            if (!$saved) {
                 $uploadMessage = 'The file could not be saved.';
                 $uploadType = 'danger';
             } else {
@@ -91,7 +111,7 @@ $fullName = trim(((string) ($student['first_name'] ?? '')) . ' ' . ((string) ($s
                             <form method="post" enctype="multipart/form-data" class="mt-3">
                                 <input type="hidden" name="id" value="<?= (int) ($student['id'] ?? 0) ?>">
                                 <label class="form-label">Upload photo</label>
-                                <input type="file" name="photo" accept="image/png,image/jpeg,image/jpg,image/webp" class="form-control">
+                                <input type="file" name="photo" accept="image/*" class="form-control">
                                 <button type="submit" class="btn btn-primary mt-2">Save photo</button>
                             </form>
                         </div>
