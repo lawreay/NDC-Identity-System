@@ -2,6 +2,10 @@
 
 final class TemplateDesignerService
 {
+    private const CARD_WIDTH = 856;
+    private const CARD_HEIGHT = 540;
+    private const CARD_ASPECT_RATIO = '1.586';
+
     private string $storagePath;
 
     public function __construct(?string $storagePath = null)
@@ -328,7 +332,14 @@ final class TemplateDesignerService
             $payload = str_replace('{{' . $tag . '}}', $value, $payload);
         }
 
-        return $payload;
+        return $this->wrapCardHtml($payload);
+    }
+
+    private function wrapCardHtml(string $html): string
+    {
+        $width = self::CARD_WIDTH;
+        $height = self::CARD_HEIGHT;
+        return '<div class="ndc-id-card-wrapper" style="width:' . $width . 'px;height:' . $height . 'px;box-sizing:border-box;overflow:hidden;position:relative;background:#fff;border:1px solid #d1d5db;border-radius:10px;">' . $html . '</div>';
     }
 
     /**

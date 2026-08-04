@@ -152,7 +152,8 @@ if ($template !== null && is_array($template)) {
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.css">
     <style>
         body { background: #f6f8fb; }
-        .preview-frame { border: 1px solid #d9eef; border-radius: 12px; background: #fff; min-height: 320px; padding: 16px; overflow:auto; }
+        .preview-frame { border: 1px solid #d9eef; border-radius: 12px; background: #fff; min-height: 560px; padding: 16px; overflow:auto; display:flex; justify-content:center; align-items:center; }
+        .preview-frame .ndc-id-card-wrapper { box-shadow: 0 10px 30px rgba(0,0,0,0.08); width:856px; height:540px; }
         .guide-card { border-left: 4px solid #0d6efd; }
         .code-block { background: #111827; color: #f9fafb; padding: 12px; border-radius: 10px; overflow-x: auto; }
         .editor { min-height: 420px; border: 1px solid #d9e2ef; border-radius: 10px; background: #fff; }
