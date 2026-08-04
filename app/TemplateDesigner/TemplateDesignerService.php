@@ -451,7 +451,7 @@ HTML;
         preg_match_all($tagPattern, $sanitized, $tokenMatches, PREG_OFFSET_CAPTURE);
         foreach ($tokenMatches[0] as $index => $tokenData) {
             $token = $tokenData[0];
-            $tagName = strtolower($tokenMatches[1][$index]);
+            $tagName = strtolower((string) ($tokenMatches[1][$index][0] ?? ''));
             if ($tagName === 'style') {
                 continue;
             }
@@ -460,7 +460,7 @@ HTML;
             }
 
             if (str_starts_with($token, '</')) {
-                $closingTag = substr($tagName, 0, -1);
+                $closingTag = $tagName;
                 if (count($stack) === 0 || end($stack) !== $closingTag) {
                     $errors[] = 'Mismatched closing tag </' . $tagName . '> in the ' . $side . ' template.';
                     continue;
