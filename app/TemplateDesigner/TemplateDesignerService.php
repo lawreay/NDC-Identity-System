@@ -97,6 +97,185 @@ final class TemplateDesignerService
         return !is_dir($directory);
     }
 
+    public function duplicateTemplate(string $templateId): ?array
+    {
+        $source = $this->templateDirectory($templateId);
+        if (!is_dir($source)) {
+            return null;
+        }
+
+        $newTemplateId = $this->nextTemplateId();
+        $destination = $this->templateDirectory($newTemplateId);
+        $this->copyDirectory($source, $destination);
+
+        $metadata = $this->getTemplate($newTemplateId);
+        if ($metadata === null) {
+            return null;
+        }
+
+        $metadata['id'] = $newTemplateId;
+        $metadata['name'] = trim((string) ($metadata['name'] ?? '') . ' Copy');
+        $metadata['created_at'] = date('Y-m-d H:i:s');
+        $metadata['updated_at'] = date('Y-m-d H:i:s');
+
+        file_put_contents($destination . DIRECTORY_SEPARATOR . 'template.json', json_encode($metadata, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+
+        return $metadata;
+    }
+
+    public function exportTemplate(string $templateId): ?string
+    {
+        $template = $this->getTemplate($templateId);
+        if ($template === null || !class_exists('ZipArchive')) {
+            return null;
+        }
+
+        $exportPath = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'template_export_' . preg_replace('/[^a-zA-Z0-9_-]/', '_', $templateId) . '.ndctemplate';
+        $zip = new ZipArchive();
+        if ($zip->open($exportPath, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) {
+            return null;
+        }
+
+        $zip->addFromString('template.json', json_encode($template, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+        $zip->addFromString('front.html', (string) ($template['front_html'] ?? ''));
+        $zip->addFromString('back.html', (string) ($template['back_html'] ?? ''));
+
+        foreach (['front_background', 'back_background', 'thumbnail'] as $assetKey) {
+            $fieldKey = $assetKey . '_path';
+            if (!empty($template[$fieldKey])) {
+                $assetPath = dirname(__DIR__, 2) . DIRECTORY_SEPARATOR . ltrim((string) $template[$fieldKey], DIRECTORY_SEPARATOR);
+                if (is_file($assetPath)) {
+                    $zip->addFile($assetPath, basename($assetPath));
+                }
+            }
+        }
+
+        $zip->close();
+        return $exportPath;
+    }
+
+    public function importTemplate(array $file): array
+    {
+        if (!isset($file['tmp_name']) || !is_uploaded_file($file['tmp_name'])) {
+            return ['errors' => ['Missing import package.']];
+        }
+
+        if (!class_exists('ZipArchive')) {
+            return ['errors' => ['ZipArchive is required to import templates.']];
+        }
+
+        $zip = new ZipArchive();
+        if ($zip->open($file['tmp_name']) !== true) {
+            return ['errors' => ['Unable to open template package.']];
+        }
+
+        $jsonIndex = $zip->locateName('template.json');
+        if ($jsonIndex === false) {
+            $zip->close();
+            return ['errors' => ['Template package must include template.json.']];
+        }
+
+        $metadata = json_decode($zip->getFromIndex($jsonIndex), true);
+        if (!is_array($metadata)) {
+            $zip->close();
+            return ['errors' => ['Invalid template metadata.']];
+        }
+
+        $newTemplateId = $this->nextTemplateId();
+        $directory = $this->templateDirectory($newTemplateId);
+        mkdir($directory, 0777, true);
+
+        foreach (['front.html', 'back.html'] as $htmlFile) {
+            $contents = $zip->getFromName($htmlFile);
+            if ($contents !== false) {
+                file_put_contents($directory . DIRECTORY_SEPARATOR . $htmlFile, $contents);
+            }
+        }
+
+        foreach (['front-background.png', 'back-background.png', 'thumbnail.png'] as $assetFile) {
+            $contents = $zip->getFromName($assetFile);
+            if ($contents !== false) {
+                file_put_contents($directory . DIRECTORY_SEPARATOR . $assetFile, $contents);
+            }
+        }
+
+        $zip->close();
+
+        $metadata['id'] = $newTemplateId;
+        $metadata['created_at'] = date('Y-m-d H:i:s');
+        $metadata['updated_at'] = date('Y-m-d H:i:s');
+        $metadata['front_background_path'] = file_exists($directory . DIRECTORY_SEPARATOR . 'front-background.png') ? $this->relativePath($directory . DIRECTORY_SEPARATOR . 'front-background.png') : '';
+        $metadata['back_background_path'] = file_exists($directory . DIRECTORY_SEPARATOR . 'back-background.png') ? $this->relativePath($directory . DIRECTORY_SEPARATOR . 'back-background.png') : '';
+        $metadata['thumbnail_path'] = file_exists($directory . DIRECTORY_SEPARATOR . 'thumbnail.png') ? $this->relativePath($directory . DIRECTORY_SEPARATOR . 'thumbnail.png') : '';
+        $metadata['name'] = trim((string) ($metadata['name'] ?? 'Imported Template'));
+
+        file_put_contents($directory . DIRECTORY_SEPARATOR . 'template.json', json_encode($metadata, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+
+        return ['template' => $metadata];
+    }
+
+    public function setDefaultTemplate(string $templateId): void
+    {
+        $defaultFile = $this->defaultTemplatePath();
+        file_put_contents($defaultFile, json_encode(['default' => $templateId], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+    }
+
+    public function getDefaultTemplateId(): ?string
+    {
+        $defaultFile = $this->defaultTemplatePath();
+        if (!is_file($defaultFile)) {
+            return null;
+        }
+
+        $decoded = json_decode((string) file_get_contents($defaultFile), true);
+        if (!is_array($decoded) || empty($decoded['default'])) {
+            return null;
+        }
+
+        return (string) $decoded['default'];
+    }
+
+    public function getDefaultTemplate(): ?array
+    {
+        $templateId = $this->getDefaultTemplateId();
+        if ($templateId === null) {
+            return null;
+        }
+
+        return $this->getTemplate($templateId);
+    }
+
+    private function defaultTemplatePath(): string
+    {
+        return dirname($this->storagePath) . DIRECTORY_SEPARATOR . 'default_template.json';
+    }
+
+    /**
+     * @param string $source
+     * @param string $destination
+     */
+    private function copyDirectory(string $source, string $destination): void
+    {
+        if (!is_dir($destination)) {
+            mkdir($destination, 0777, true);
+        }
+
+        $items = scandir($source) ?: [];
+        foreach ($items as $item) {
+            if ($item === '.' || $item === '..') {
+                continue;
+            }
+
+            $src = $source . DIRECTORY_SEPARATOR . $item;
+            $dest = $destination . DIRECTORY_SEPARATOR . $item;
+            if (is_dir($src)) {
+                $this->copyDirectory($src, $dest);
+            } else {
+                copy($src, $dest);
+            }
+        }
+    }
+
     /**
      * @param array<string, mixed> $template
      * @param array<string, mixed> $student

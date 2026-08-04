@@ -7,6 +7,20 @@ $success = '';
 $template = null;
 $mode = 'list';
 $selectedTemplateId = '';
+$defaultTemplateId = $service->getDefaultTemplateId();
+
+if (isset($_GET['export']) && is_string($_GET['export']) && $_GET['export'] !== '') {
+    $exportPath = $service->exportTemplate($_GET['export']);
+    if ($exportPath !== null && is_file($exportPath)) {
+        header('Content-Type: application/zip');
+        header('Content-Disposition: attachment; filename="' . basename($exportPath) . '"');
+        header('Content-Length: ' . filesize($exportPath));
+        readfile($exportPath);
+        unlink($exportPath);
+        exit;
+    }
+    $errors[] = 'Unable to export the selected template.';
+}
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? 'save';
@@ -16,6 +30,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $service->deleteTemplate($templateId);
         $success = 'Template deleted.';
         $mode = 'list';
+    } elseif ($action === 'duplicate' && $templateId !== '') {
+        $duplicate = $service->duplicateTemplate($templateId);
+        if ($duplicate === null) {
+            $errors[] = 'Unable to duplicate the selected template.';
+        } else {
+            $success = 'Template duplicated successfully.';
+        }
+        $mode = 'list';
+    } elseif ($action === 'set_default' && $templateId !== '') {
+        $service->setDefaultTemplate($templateId);
+        $success = 'Default template updated.';
+        $defaultTemplateId = $templateId;
+        $mode = 'list';
+    } elseif ($action === 'import') {
+        $result = $service->importTemplate($_FILES['template_package'] ?? []);
+        if (!empty($result['errors'])) {
+            $errors = $result['errors'];
+        } else {
+            $success = 'Template imported successfully.';
+            $mode = 'list';
+        }
     } else {
         $input = [
             'name' => trim((string) ($_POST['name'] ?? '')),
@@ -64,6 +99,7 @@ if (isset($_GET['preview']) && is_string($_GET['preview']) && $_GET['preview'] !
 }
 
 $templates = $service->listTemplates();
+$defaultTemplateId = $service->getDefaultTemplateId();
 $student = [
     'full_name' => 'Moses Banda',
     'student_number' => 'BND001',
@@ -161,6 +197,23 @@ if ($template !== null && is_array($template)) {
             </div>
         </div>
 
+        <div class="card shadow-sm mb-4">
+            <div class="card-body">
+                <h3 class="h6 mb-3">Import Template Package</h3>
+                <form method="post" enctype="multipart/form-data" class="row g-3 align-items-end">
+                    <input type="hidden" name="action" value="import">
+                    <div class="col-md-8">
+                        <label class="form-label">Template Package</label>
+                        <input type="file" name="template_package" class="form-control" accept=".ndctemplate,.zip" required>
+                    </div>
+                    <div class="col-md-4">
+                        <button type="submit" class="btn btn-secondary">Import Template</button>
+                    </div>
+                </form>
+                <p class="text-muted small mt-3 mb-0">Imported templates can be shared between environments and reused across sites.</p>
+            </div>
+        </div>
+
         <?php if ($templates === []): ?>
             <div class="alert alert-info">No templates yet. Create your first design.</div>
         <?php else: ?>
@@ -174,11 +227,27 @@ if ($template !== null && is_array($template)) {
                                         <h3 class="h6 mb-1"><?= htmlspecialchars((string) ($item['name'] ?? 'Untitled'), ENT_QUOTES, 'UTF-8') ?></h3>
                                         <p class="text-muted small mb-0"><?= htmlspecialchars((string) ($item['description'] ?? ''), ENT_QUOTES, 'UTF-8') ?></p>
                                     </div>
-                                    <span class="badge text-bg-secondary"><?= htmlspecialchars((string) ($item['status'] ?? 'draft'), ENT_QUOTES, 'UTF-8') ?></span>
+                                    <div class="text-end">
+                                        <span class="badge text-bg-secondary"><?= htmlspecialchars((string) ($item['status'] ?? 'draft'), ENT_QUOTES, 'UTF-8') ?></span>
+                                        <?php if (($item['id'] ?? '') === $defaultTemplateId): ?>
+                                            <span class="badge bg-success">Default</span>
+                                        <?php endif; ?>
+                                    </div>
                                 </div>
-                                <div class="mt-3 d-flex gap-2">
+                                <div class="mt-3 d-flex flex-wrap gap-2">
                                     <a href="template-designer.php?preview=<?= urlencode((string) ($item['id'] ?? '')) ?>" class="btn btn-outline-primary btn-sm">Preview</a>
                                     <a href="template-designer.php?edit=<?= urlencode((string) ($item['id'] ?? '')) ?>" class="btn btn-outline-secondary btn-sm">Edit</a>
+                                    <form method="post" class="d-inline">
+                                        <input type="hidden" name="action" value="duplicate">
+                                        <input type="hidden" name="template_id" value="<?= htmlspecialchars((string) ($item['id'] ?? ''), ENT_QUOTES, 'UTF-8') ?>">
+                                        <button class="btn btn-outline-info btn-sm" type="submit">Duplicate</button>
+                                    </form>
+                                    <a href="template-designer.php?export=<?= urlencode((string) ($item['id'] ?? '')) ?>" class="btn btn-outline-secondary btn-sm">Export</a>
+                                    <form method="post" class="d-inline">
+                                        <input type="hidden" name="action" value="set_default">
+                                        <input type="hidden" name="template_id" value="<?= htmlspecialchars((string) ($item['id'] ?? ''), ENT_QUOTES, 'UTF-8') ?>">
+                                        <button class="btn btn-outline-warning btn-sm" type="submit" <?= (($item['id'] ?? '') === $defaultTemplateId) ? 'disabled' : '' ?>>Set Default</button>
+                                    </form>
                                     <form method="post" class="d-inline" onsubmit="return confirm('Delete this template?');">
                                         <input type="hidden" name="action" value="delete">
                                         <input type="hidden" name="template_id" value="<?= htmlspecialchars((string) ($item['id'] ?? ''), ENT_QUOTES, 'UTF-8') ?>">
