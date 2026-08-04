@@ -72,6 +72,7 @@ try {
                                 <td><?= htmlspecialchars((string) ($student['status'] ?? ''), ENT_QUOTES, 'UTF-8') ?></td>
                                 <td>
                                     <a href="student-profile.php?id=<?= (int) ($student['id'] ?? 0) ?>" class="btn btn-outline-primary btn-sm">Open profile</a>
+                                    <a href="student-id-card.php?id=<?= (int) ($student['id'] ?? 0) ?>" class="btn btn-outline-secondary btn-sm ms-1">Preview ID</a>
                                 </td>
                             </tr>
                         <?php endforeach; ?>
