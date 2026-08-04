@@ -3,6 +3,8 @@ require_once __DIR__ . '/../app/Database.php';
 require_once __DIR__ . '/../app/StudentRepository.php';
 
 $id = isset($_GET['id']) ? (int) $_GET['id'] : 0;
+$uploadMessage = '';
+$uploadType = '';
 
 try {
     $repository = new StudentRepository(Database::getConnection());
@@ -11,6 +13,39 @@ try {
 } catch (Throwable $exception) {
     $student = null;
     $errorMessage = $exception->getMessage();
+}
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && $id > 0) {
+    if (isset($_FILES['photo']) && is_uploaded_file($_FILES['photo']['tmp_name'])) {
+        $allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'];
+        $file = $_FILES['photo'];
+
+        if (!in_array($file['type'], $allowedTypes, true)) {
+            $uploadMessage = 'Only PNG, JPG, and WebP images are allowed.';
+            $uploadType = 'danger';
+        } elseif ($file['error'] !== UPLOAD_ERR_OK) {
+            $uploadMessage = 'The upload failed. Please try again.';
+            $uploadType = 'danger';
+        } else {
+            $extension = pathinfo($file['name'], PATHINFO_EXTENSION);
+            $filename = 'student_' . $id . '_' . time() . '.' . strtolower($extension);
+            $destination = __DIR__ . '/uploads/student_photos/' . $filename;
+
+            if (!move_uploaded_file($file['tmp_name'], $destination)) {
+                $uploadMessage = 'The file could not be saved.';
+                $uploadType = 'danger';
+            } else {
+                $relativePath = 'uploads/student_photos/' . $filename;
+                $repository->updatePhoto($id, $relativePath);
+                $uploadMessage = 'Photo uploaded successfully.';
+                $uploadType = 'success';
+                $student = $repository->findById($id);
+            }
+        }
+    } else {
+        $uploadMessage = 'Please choose a photo to upload.';
+        $uploadType = 'warning';
+    }
 }
 
 $photoPath = $student['photo_path'] ?? '';
@@ -35,6 +70,10 @@ $fullName = trim(((string) ($student['first_name'] ?? '')) . ' ' . ((string) ($s
         <?php elseif (!$student): ?>
             <div class="alert alert-warning">Student not found.</div>
         <?php else: ?>
+            <?php if ($uploadMessage !== ''): ?>
+                <div class="alert alert-<?= htmlspecialchars($uploadType, ENT_QUOTES, 'UTF-8') ?>"><?= htmlspecialchars($uploadMessage, ENT_QUOTES, 'UTF-8') ?></div>
+            <?php endif; ?>
+
             <div class="card shadow-sm">
                 <div class="card-body">
                     <div class="row g-4 align-items-start">
@@ -45,9 +84,16 @@ $fullName = trim(((string) ($student['first_name'] ?? '')) . ' ' . ((string) ($s
                                 <div class="border rounded d-flex flex-column justify-content-center align-items-center text-center p-4 bg-light" style="min-height: 280px;">
                                     <div class="display-6 text-muted mb-2">📷</div>
                                     <h5 class="mb-2">No photo available</h5>
-                                    <p class="text-muted mb-0">Add a photo later when one is uploaded.</p>
+                                    <p class="text-muted mb-0">Upload a photo to add one here.</p>
                                 </div>
                             <?php endif; ?>
+
+                            <form method="post" enctype="multipart/form-data" class="mt-3">
+                                <input type="hidden" name="id" value="<?= (int) ($student['id'] ?? 0) ?>">
+                                <label class="form-label">Upload photo</label>
+                                <input type="file" name="photo" accept="image/png,image/jpeg,image/jpg,image/webp" class="form-control">
+                                <button type="submit" class="btn btn-primary mt-2">Save photo</button>
+                            </form>
                         </div>
                         <div class="col-md-8">
                             <h1 class="h3 mb-3"><?= htmlspecialchars($fullName ?: 'Student profile', ENT_QUOTES, 'UTF-8') ?></h1>

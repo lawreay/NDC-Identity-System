@@ -44,4 +44,13 @@ final class StudentRepository
 
         return $student === false ? null : $student;
     }
+
+    public function updatePhoto(int $id, string $photoPath): bool
+    {
+        $statement = $this->connection->prepare('UPDATE students SET photo_path = :photo_path WHERE id = :id');
+        return $statement->execute([
+            ':photo_path' => $photoPath,
+            ':id' => $id,
+        ]);
+    }
 }
