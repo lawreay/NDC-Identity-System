@@ -1,0 +1,9 @@
+.id-card-back.green {
+  font-family: Arial, sans-serif;
+  background: #f0fdf4;
+  color: #14532d;
+  border-radius: 20px;
+  padding: 24px;
+  min-height: 280px;
+  border: 1px solid #bfdbfe;
+}

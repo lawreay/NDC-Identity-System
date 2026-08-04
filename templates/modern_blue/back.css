@@ -1,0 +1,10 @@
+.id-card-back {
+  font-family: Arial, sans-serif;
+  background: #f8fbff;
+  color: #12324c;
+  border-radius: 20px;
+  padding: 24px;
+  min-height: 320px;
+  border: 1px solid #dfe9f4;
+}
+.signature { margin-top:16px; padding-top:12px; border-top:1px solid #dfe9f4; }

@@ -1,0 +1,26 @@
+<section class="id-card-front">
+  <div class="header">
+    <div>
+      <h1>{{organization.name}}</h1>
+      <p>Student Identity Card</p>
+    </div>
+    <div class="badge">{{student.status}}</div>
+  </div>
+  <div class="body">
+    <div class="photo-zone">
+      {{student.photo}}
+    </div>
+    <div class="details">
+      <div class="field"><span>Full Name</span><strong>{{student.full_name}}</strong></div>
+      <div class="field"><span>Student ID</span><strong>{{student.student_id}}</strong></div>
+      <div class="field"><span>Program</span><strong>{{student.program}}</strong></div>
+      <div class="field"><span>Department</span><strong>{{student.department}}</strong></div>
+      <div class="field"><span>Issue Date</span><strong>{{student.issue_date}}</strong></div>
+      <div class="field"><span>Expiry Date</span><strong>{{student.expiry_date}}</strong></div>
+    </div>
+  </div>
+  <div class="footer">
+    <div>{{card.qr_code}}</div>
+    <div>{{current_date}}</div>
+  </div>
+</section>
