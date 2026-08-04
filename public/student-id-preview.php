@@ -3,12 +3,18 @@ require_once __DIR__ . '/../app/Database.php';
 require_once __DIR__ . '/../app/StudentRepository.php';
 
 $id = isset($_GET['id']) ? (int) $_GET['id'] : 0;
+$action = trim((string) ($_GET['action'] ?? 'preview'));
+$regenerate = ($action === 'regenerate');
 
 try {
     $repository = new StudentRepository(Database::getConnection());
     $student = $repository->findById($id);
     if ($student) {
-        $studentNumber = $repository->generateStudentNumber((int) $student['id'], (string) ($student['first_name'] ?? ''), (string) ($student['last_name'] ?? ''));
+        if ($regenerate) {
+            $studentNumber = $repository->generateStudentNumber((int) $student['id'], (string) ($student['first_name'] ?? ''), (string) ($student['last_name'] ?? ''));
+        } else {
+            $studentNumber = $repository->generateStudentNumber((int) $student['id'], (string) ($student['first_name'] ?? ''), (string) ($student['last_name'] ?? ''));
+        }
         $student = $repository->findById($id);
         $student['student_number'] = $studentNumber;
     }
@@ -20,6 +26,13 @@ if (!$student) {
     http_response_code(404);
     echo 'Student not found.';
     exit;
+}
+
+if ($action === 'download') {
+    header('Content-Type: application/octet-stream');
+    header('Content-Disposition: attachment; filename="student-id-' . (int) $id . '.html"');
+    header('Pragma: no-cache');
+    header('Expires: 0');
 }
 
 $fullName = trim(((string) ($student['first_name'] ?? '')) . ' ' . ((string) ($student['last_name'] ?? '')));
@@ -139,9 +152,12 @@ $status = (string) ($student['status'] ?? '');
                 <h1 class="h3 mb-1">Student ID Preview</h1>
                 <p class="text-muted mb-0">Professional preview only — no PDF or print output.</p>
             </div>
-            <div class="d-flex gap-2">
+            <div class="d-flex gap-2 flex-wrap">
                 <a href="student-profile.php?id=<?= (int) $id ?>" class="btn btn-outline-secondary">Back to profile</a>
-                <button type="button" class="btn btn-primary" onclick="window.print()">Export PDF</button>
+                <a href="student-id-preview.php?id=<?= (int) $id ?>&action=preview" class="btn btn-outline-primary">Preview</a>
+                <button type="button" class="btn btn-primary" onclick="window.print()">Print</button>
+                <a href="student-id-preview.php?id=<?= (int) $id ?>&action=download" class="btn btn-success">Download</a>
+                <a href="student-id-preview.php?id=<?= (int) $id ?>&action=regenerate" class="btn btn-warning text-dark">Regenerate</a>
             </div>
         </div>
 
