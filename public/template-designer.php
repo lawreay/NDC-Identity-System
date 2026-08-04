@@ -493,7 +493,53 @@ if ($template !== null && is_array($template)) {
         backEditor.refresh();
     });
 
-    document.querySelectorAll('.tag-button').forEach(button => {
+    const livePreviewValues = {
+        'student.full_name': <?= json_encode($student['full_name'] ?? 'Student Name', JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>,
+        'student.student_id': <?= json_encode($student['student_number'] ?? 'BND001', JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>,
+        'student.gender': <?= json_encode($student['gender'] ?? 'Male', JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>,
+        'student.department': <?= json_encode($student['department'] ?? 'ICT', JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>,
+        'student.program': <?= json_encode($student['program'] ?? 'Software Development', JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>,
+        'student.class_level': <?= json_encode($student['class_level'] ?? 'Level 3', JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>,
+        'student.qualification': <?= json_encode($student['qualification'] ?? 'Certificate', JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>,
+        'student.issue_date': <?= json_encode($student['issue_date'] ?? '2026-01-20', JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>,
+        'student.expiry_date': <?= json_encode($student['expiry_date'] ?? '2027-01-20', JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>,
+        'student.status': <?= json_encode($student['status'] ?? 'Active', JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>,
+        'organization.name': <?= json_encode($organization['name'] ?? 'NDC', JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>,
+        'organization.address': <?= json_encode($organization['address'] ?? 'Ntcheu', JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>,
+        'organization.phone': <?= json_encode($organization['phone'] ?? '+265 999 000 000', JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>,
+        'organization.email': <?= json_encode($organization['email'] ?? 'info@ndc.edu', JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>,
+        'organization.website': <?= json_encode($organization['website'] ?? 'https://ndc.edu', JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>,
+        'authorized.name': <?= json_encode($organization['authorized_name'] ?? 'Authorized Officer', JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>,
+        'theme.primary_color': <?= json_encode($theme['primary_color'] ?? '#0b5ed7', JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>,
+        'theme.secondary_color': <?= json_encode($theme['secondary_color'] ?? '#0a7e8c', JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>,
+        'theme.accent_color': <?= json_encode($theme['accent_color'] ?? '#f4b400', JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>,
+        'template.front_background': <?= json_encode($service->renderBackgroundImageTag($template['front_background_path'] ?? ''), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>,
+        'template.back_background': <?= json_encode($service->renderBackgroundImageTag($template['back_background_path'] ?? ''), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>,
+        'card.qr_code': '<div style="display:inline-flex;align-items:center;justify-content:center;width:90px;height:90px;border:2px dashed #999;font-size:11px;color:#666;">QR</div>',
+        'card.barcode': '<div style="display:inline-flex;align-items:center;justify-content:center;width:140px;height:44px;border:2px dashed #999;font-size:11px;color:#666;">Barcode</div>',
+        'student.photo': 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==',
+        'organization.logo': 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw=='
+    };
+
+    function renderTemplateHtml(html) {
+        let result = html;
+        Object.entries(livePreviewValues).forEach(([key, value]) => {
+            const pattern = new RegExp('\{\{\s*' + key.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&') + '\s*\}\}', 'g');
+            result = result.replace(pattern, value);
+        });
+        return result;
+    }
+
+    function renderLivePreview() {
+        const front = renderTemplateHtml(frontEditor.getValue());
+        const back = renderTemplateHtml(backEditor.getValue());
+        document.getElementById('livePreviewFront').innerHTML = front;
+        document.getElementById('livePreviewBack').innerHTML = back;
+        document.getElementById('frontHtmlInput').value = frontEditor.getValue();
+        document.getElementById('backHtmlInput').value = backEditor.getValue();
+    }
+
+    const debounce = (fn, delay) => {
         button.addEventListener('click', () => {
             const tag = button.dataset.tag;
             const activeEditor = document.getElementById('frontEditor').classList.contains('d-none') ? backEditor : frontEditor;

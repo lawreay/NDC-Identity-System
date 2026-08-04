@@ -560,22 +560,22 @@ HTML;
         return null;
     }
 
-    private function renderImageTag(?string $path, string $alt): string
+    public function renderImageTag(?string $path, string $alt): string
     {
         if ($path === null || $path === '') {
-            return '<span style="display:inline-flex;align-items:center;justify-content:center;padding:8px 12px;border:1px dashed #999;color:#666;font-size:12px;">' . htmlspecialchars($alt, ENT_QUOTES, 'UTF-8') . '</span>';
+            return 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==';
         }
 
         $absolutePath = dirname(__DIR__, 2) . DIRECTORY_SEPARATOR . ltrim($path, DIRECTORY_SEPARATOR);
         if (!is_file($absolutePath)) {
-            return '<span style="display:inline-flex;align-items:center;justify-content:center;padding:8px 12px;border:1px dashed #999;color:#666;font-size:12px;">' . htmlspecialchars($alt, ENT_QUOTES, 'UTF-8') . '</span>';
+            return 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==';
         }
 
         $data = base64_encode((string) file_get_contents($absolutePath));
         return 'data:image/png;base64,' . $data;
     }
 
-    private function renderBackgroundImageTag(?string $path): string
+    public function renderBackgroundImageTag(?string $path): string
     {
         if ($path === null || $path === '') {
             return '';
