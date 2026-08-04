@@ -1,0 +1,76 @@
+{
+  "active": "template_1",
+  "templates": {
+    "template_1": {
+      "name": "Template 1",
+      "config": {
+        "student_id_card": {
+          "front": {
+            "header": {
+              "organization_logo": true,
+              "organization_name": "Ntcheu Development Center",
+              "card_title": "STUDENT IDENTITY CARD"
+            },
+            "student": {
+              "photo": true,
+              "full_name": true,
+              "student_id": true,
+              "gender": true,
+              "qualification": true,
+              "program": true,
+              "department": true,
+              "issue_date": true,
+              "expiry_date": true,
+              "status": true
+            },
+            "verification": {
+              "qr_code": true,
+              "show_verification_text": "Scan to Verify",
+              "show_raw_url": false
+            },
+            "footer": {
+              "organization_short_name": "NDC"
+            }
+          },
+          "back": {
+            "header": {
+              "organization_logo": true,
+              "title": "CARD INFORMATION"
+            },
+            "notice": {
+              "enabled": true,
+              "text": "This card remains the property of Ntcheu Development Center. If found, please return it to the address below."
+            },
+            "organization": {
+              "address": true,
+              "phone": true,
+              "email": true,
+              "website": true
+            },
+            "signatures": {
+              "student_signature": true,
+              "authorized_signature": true
+            },
+            "verification": {
+              "qr_code": true,
+              "verification_code": true
+            }
+          },
+          "design": {
+            "orientation": "landscape",
+            "card_size": "CR80",
+            "rounded_corners": true,
+            "theme": "modern",
+            "photo_shape": "rounded_rectangle",
+            "show_watermark": true,
+            "show_security_pattern": true,
+            "show_hologram_placeholder": true,
+            "primary_color": "#0B5ED7",
+            "secondary_color": "#0A7E8C",
+            "accent_color": "#F4B400"
+          }
+        }
+      }
+    }
+  }
+}

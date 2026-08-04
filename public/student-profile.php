@@ -115,8 +115,9 @@ $fullName = trim(((string) ($student['first_name'] ?? '')) . ' ' . ((string) ($s
                                 <button type="submit" class="btn btn-primary mt-2">Save photo</button>
                             </form>
 
-                            <div class="mt-3">
-                                <a href="student-id-preview.php?id=<?= (int) ($student['id'] ?? 0) ?>" class="btn btn-outline-primary w-100">View ID</a>
+                            <div class="mt-3 d-grid gap-2">
+                                <a href="student-id-preview.php?id=<?= (int) ($student['id'] ?? 0) ?>" class="btn btn-outline-primary">View ID</a>
+                                <a href="id-settings.php" class="btn btn-outline-secondary">ID Settings</a>
                             </div>
                         </div>
                         <div class="col-md-8">
