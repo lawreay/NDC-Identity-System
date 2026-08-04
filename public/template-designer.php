@@ -525,6 +525,16 @@ if ($template !== null && is_array($template)) {
         });
     });
 
+    document.querySelectorAll('[data-preview-side]').forEach(button => {
+        button.addEventListener('click', () => {
+            document.querySelectorAll('[data-preview-side]').forEach(btn => btn.classList.remove('active'));
+            button.classList.add('active');
+            const side = button.dataset.previewSide;
+            document.getElementById('livePreviewFront').classList.toggle('d-none', side !== 'front');
+            document.getElementById('livePreviewBack').classList.toggle('d-none', side !== 'back');
+        });
+    });
+
     document.getElementById('frontTab').addEventListener('click', () => {
         document.getElementById('frontEditor').classList.remove('d-none');
         document.getElementById('backEditor').classList.add('d-none');
