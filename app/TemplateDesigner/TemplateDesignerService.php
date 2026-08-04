@@ -246,8 +246,28 @@ HTML;
         $frontHtml = (string) ($input['front_html'] ?? $this->defaultFrontHtml());
         $backHtml = (string) ($input['back_html'] ?? $this->defaultBackHtml());
 
-        $frontBackgroundPath = $this->storeImageUpload($files['front_background'] ?? null, $directory, 'front-background');
-        $backBackgroundPath = $this->storeImageUpload($files['back_background'] ?? null, $directory, 'back-background');
+        $frontBackgroundPath = null;
+        $backBackgroundPath = null;
+        $currentTemplate = $this->getTemplate($templateId) ?? [];
+
+        if (!empty($files['front_background'] ?? null)) {
+            $frontBackgroundPath = $this->storeImageUpload($files['front_background'], $directory, 'front-background');
+        }
+        if (!empty($files['back_background'] ?? null)) {
+            $backBackgroundPath = $this->storeImageUpload($files['back_background'], $directory, 'back-background');
+        }
+
+        if (!empty($input['remove_front_background'])) {
+            $this->removeFile($directory . DIRECTORY_SEPARATOR . 'front-background.png');
+            $currentTemplate['front_background_path'] = '';
+        }
+        if (!empty($input['remove_back_background'])) {
+            $this->removeFile($directory . DIRECTORY_SEPARATOR . 'back-background.png');
+            $currentTemplate['back_background_path'] = '';
+        }
+
+        $frontBackgroundPath = $frontBackgroundPath ?? ((string) ($input['front_background_path'] ?? ($currentTemplate['front_background_path'] ?? '')));
+        $backBackgroundPath = $backBackgroundPath ?? ((string) ($input['back_background_path'] ?? ($currentTemplate['back_background_path'] ?? '')));
 
         $metadata = [
             'id' => $templateId,
@@ -255,9 +275,9 @@ HTML;
             'description' => $description,
             'front_html' => $frontHtml,
             'back_html' => $backHtml,
-            'front_background_path' => $frontBackgroundPath ?? ((string) ($input['front_background_path'] ?? '')),
-            'back_background_path' => $backBackgroundPath ?? ((string) ($input['back_background_path'] ?? '')),
-            'thumbnail_path' => $this->createThumbnail($directory, $frontBackgroundPath ?? ((string) ($input['front_background_path'] ?? ''))),
+            'front_background_path' => $frontBackgroundPath,
+            'back_background_path' => $backBackgroundPath,
+            'thumbnail_path' => $this->createThumbnail($directory, $frontBackgroundPath),
             'status' => $status,
             'created_by' => (string) ($input['created_by'] ?? 'Administrator'),
             'created_at' => (string) ($input['created_at'] ?? date('Y-m-d H:i:s')),
@@ -393,7 +413,15 @@ HTML;
 
     private function relativePath(string $absolutePath): string
     {
-        return str_replace(dirname(__DIR__, 2) . DIRECTORY_SEPARATOR, '', $absolutePath);
+        $relative = str_replace(dirname(__DIR__, 2) . DIRECTORY_SEPARATOR, '', $absolutePath);
+        return str_replace('\\', '/', $relative);
+    }
+
+    private function removeFile(string $path): void
+    {
+        if (is_file($path)) {
+            unlink($path);
+        }
     }
 
     private function imagePath(string $path): ?string

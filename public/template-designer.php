@@ -107,10 +107,20 @@ if ($template !== null && is_array($template)) {
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
         body { background: #f6f8fb; }
-        .preview-frame { border: 1px solid #d9e2ef; border-radius: 12px; background: #fff; min-height: 320px; padding: 16px; }
+        .preview-frame { border: 1px solid #d9e2ef; border-radius: 12px; background: #fff; min-height: 320px; padding: 16px; overflow:auto; }
         .guide-card { border-left: 4px solid #0d6efd; }
         .code-block { background: #111827; color: #f9fafb; padding: 12px; border-radius: 10px; overflow-x: auto; }
-        textarea.form-control { min-height: 280px; font-family: Consolas, monospace; }
+        .editor { min-height: 420px; border: 1px solid #d9e2ef; border-radius: 10px; background: #fff; }
+        .editor-toolbar { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; margin-bottom: 1rem; }
+        .editor-tab { cursor: pointer; }
+        .editor-tab.active { background: #0d6efd; color: #fff; }
+        .tag-toolbox { gap: 0.5rem; display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); }
+        .tag-toolbar { border: 1px solid #dee2e6; border-radius: 0.75rem; padding: 0.75rem; background: #fff; }
+        .tag-button { display: inline-flex; align-items: center; justify-content: center; gap: 0.35rem; }
+        .field-panel { border: 1px solid #dee2e6; border-radius: 0.75rem; padding: 1rem; background: #fff; }
+        .background-preview { width: 100%; min-height: 120px; border: 1px solid #d9e2ef; border-radius: 12px; background: #f8f9fa; background-size: cover; background-position: center; display: flex; align-items: center; justify-content: center; color: #6c757d; text-align: center; }
+        .background-preview img { max-width: 100%; height: auto; border-radius: 12px; }
+        .toggle-button-group .btn { min-width: 120px; }
     </style>
 </head>
 <body>
@@ -207,16 +217,18 @@ if ($template !== null && is_array($template)) {
         </div>
     <?php else: ?>
         <div class="row g-4">
-            <div class="col-lg-8">
-                <div class="card shadow-sm">
+            <div class="col-xl-7">
+                <div class="card shadow-sm mb-4">
                     <div class="card-body">
                         <h2 class="h5 mb-3"><?= $selectedTemplateId === '' ? 'Create Template' : 'Edit Template' ?></h2>
-                        <form method="post" enctype="multipart/form-data">
+                        <form method="post" enctype="multipart/form-data" id="templateDesignerForm">
                             <input type="hidden" name="action" value="save">
                             <input type="hidden" name="template_id" value="<?= htmlspecialchars((string) ($template['id'] ?? ''), ENT_QUOTES, 'UTF-8') ?>">
                             <input type="hidden" name="created_at" value="<?= htmlspecialchars((string) ($template['created_at'] ?? date('Y-m-d H:i:s')), ENT_QUOTES, 'UTF-8') ?>">
+                            <input type="hidden" name="remove_front_background" id="remove_front_background" value="0">
+                            <input type="hidden" name="remove_back_background" id="remove_back_background" value="0">
 
-                            <div class="row g-3">
+                            <div class="row g-3 mb-4">
                                 <div class="col-md-6">
                                     <label class="form-label">Template Name</label>
                                     <input type="text" name="name" class="form-control" value="<?= htmlspecialchars((string) ($template['name'] ?? ''), ENT_QUOTES, 'UTF-8') ?>" required>
@@ -232,25 +244,54 @@ if ($template !== null && is_array($template)) {
                                     <label class="form-label">Description</label>
                                     <textarea name="description" class="form-control" rows="3"><?= htmlspecialchars((string) ($template['description'] ?? ''), ENT_QUOTES, 'UTF-8') ?></textarea>
                                 </div>
+                            </div>
+
+                            <div class="row g-3 mb-4">
                                 <div class="col-md-6">
-                                    <label class="form-label">Front Background Image</label>
-                                    <input type="file" name="front_background" class="form-control" accept="image/jpeg,image/png,image/webp">
+                                    <label class="form-label">Front Background</label>
+                                    <div class="background-preview mb-2" id="frontBackgroundPreview" style="background-image: url('<?= htmlspecialchars((string) $service->renderBackgroundImageTag($template['front_background_path'] ?? ''), ENT_QUOTES, 'UTF-8') ?>');">
+                                        <?php if (empty($template['front_background_path'])): ?>
+                                            No front background uploaded
+                                        <?php endif; ?>
+                                    </div>
+                                    <div class="d-flex gap-2">
+                                        <label class="btn btn-outline-secondary btn-sm mb-0">
+                                            Replace<input type="file" name="front_background" accept="image/jpeg,image/png,image/webp" class="form-control d-none" id="frontBackgroundInput">
+                                        </label>
+                                        <button type="button" class="btn btn-outline-danger btn-sm" id="removeFrontBackgroundBtn" <?= empty($template['front_background_path']) ? 'disabled' : '' ?>>Remove</button>
+                                    </div>
                                 </div>
                                 <div class="col-md-6">
-                                    <label class="form-label">Back Background Image</label>
-                                    <input type="file" name="back_background" class="form-control" accept="image/jpeg,image/png,image/webp">
-                                </div>
-                                <div class="col-12">
-                                    <label class="form-label">Front HTML</label>
-                                    <textarea name="front_html" class="form-control" rows="16"><?= htmlspecialchars((string) ($template['front_html'] ?? $service->defaultFrontHtml()), ENT_QUOTES, 'UTF-8') ?></textarea>
-                                </div>
-                                <div class="col-12">
-                                    <label class="form-label">Back HTML</label>
-                                    <textarea name="back_html" class="form-control" rows="16"><?= htmlspecialchars((string) ($template['back_html'] ?? $service->defaultBackHtml()), ENT_QUOTES, 'UTF-8') ?></textarea>
+                                    <label class="form-label">Back Background</label>
+                                    <div class="background-preview mb-2" id="backBackgroundPreview" style="background-image: url('<?= htmlspecialchars((string) $service->renderBackgroundImageTag($template['back_background_path'] ?? ''), ENT_QUOTES, 'UTF-8') ?>');">
+                                        <?php if (empty($template['back_background_path'])): ?>
+                                            No back background uploaded
+                                        <?php endif; ?>
+                                    </div>
+                                    <div class="d-flex gap-2">
+                                        <label class="btn btn-outline-secondary btn-sm mb-0">
+                                            Replace<input type="file" name="back_background" accept="image/jpeg,image/png,image/webp" class="form-control d-none" id="backBackgroundInput">
+                                        </label>
+                                        <button type="button" class="btn btn-outline-danger btn-sm" id="removeBackBackgroundBtn" <?= empty($template['back_background_path']) ? 'disabled' : '' ?>>Remove</button>
+                                    </div>
                                 </div>
                             </div>
 
-                            <div class="mt-4 d-flex gap-2">
+                            <div class="card shadow-sm mb-4">
+                                <div class="card-body">
+                                    <div class="editor-toolbar mb-3">
+                                        <button type="button" id="frontTab" class="btn btn-sm btn-outline-primary editor-tab active">Front HTML</button>
+                                        <button type="button" id="backTab" class="btn btn-sm btn-outline-primary editor-tab">Back HTML</button>
+                                        <div class="ms-auto text-muted small">Insert tags using the toolbox on the right.</div>
+                                    </div>
+                                    <div id="frontEditor" class="editor"></div>
+                                    <div id="backEditor" class="editor d-none"></div>
+                                    <textarea name="front_html" id="frontHtmlInput" class="form-control d-none"><?= htmlspecialchars((string) ($template['front_html'] ?? $service->defaultFrontHtml()), ENT_QUOTES, 'UTF-8') ?></textarea>
+                                    <textarea name="back_html" id="backHtmlInput" class="form-control d-none"><?= htmlspecialchars((string) ($template['back_html'] ?? $service->defaultBackHtml()), ENT_QUOTES, 'UTF-8') ?></textarea>
+                                </div>
+                            </div>
+
+                            <div class="d-flex gap-2 mb-4">
                                 <button type="submit" class="btn btn-primary">Save Template</button>
                                 <a href="template-designer.php" class="btn btn-outline-secondary">Cancel</a>
                             </div>
@@ -258,62 +299,59 @@ if ($template !== null && is_array($template)) {
                     </div>
                 </div>
             </div>
-            <div class="col-lg-4">
+            <div class="col-xl-5">
+                <div class="card shadow-sm mb-4">
+                    <div class="card-body">
+                        <h2 class="h6 mb-3">Live Preview</h2>
+                        <div class="btn-group toggle-button-group mb-3" role="group">
+                            <button type="button" class="btn btn-sm btn-outline-primary active" data-preview-side="front">Front</button>
+                            <button type="button" class="btn btn-sm btn-outline-primary" data-preview-side="back">Back</button>
+                        </div>
+                        <div class="preview-frame" id="livePreviewFront" style="display:block;"></div>
+                        <div class="preview-frame d-none" id="livePreviewBack"></div>
+                    </div>
+                </div>
                 <div class="card shadow-sm guide-card mb-3">
                     <div class="card-body">
-                        <h2 class="h6">Template Development Guide</h2>
-                        <div class="accordion" id="guideAccordion">
-                            <div class="accordion-item">
-                                <h3 class="accordion-header">
-                                    <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#guideBackground">
-                                        Background Images
-                                    </button>
-                                </h3>
-                                <div id="guideBackground" class="accordion-collapse collapse show" data-bs-parent="#guideAccordion">
-                                    <div class="accordion-body">
-                                        <p class="small mb-2">Use <code>{{template.front_background}}</code> for the front design and <code>{{template.back_background}}</code> for the back design.</p>
-                                    </div>
-                                </div>
+                        <h2 class="h6">Tag Toolbox</h2>
+                        <div class="tag-toolbox mt-3">
+                            <div class="tag-toolbar">
+                                <div class="fw-semibold mb-2">Student</div>
+                                <button type="button" class="btn btn-sm btn-outline-secondary tag-button" data-tag="{{student.full_name}}">Full Name</button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary tag-button" data-tag="{{student.student_id}}">Student ID</button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary tag-button" data-tag="{{student.photo}}">Photo</button>
                             </div>
-                            <div class="accordion-item">
-                                <h3 class="accordion-header">
-                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#guideTags">
-                                        Available Tags
-                                    </button>
-                                </h3>
-                                <div id="guideTags" class="accordion-collapse collapse" data-bs-parent="#guideAccordion">
-                                    <div class="accordion-body">
-                                        <div class="small">
-                                            <p class="fw-semibold mb-1">Student</p>
-                                            <div class="code-block">{{student.photo}}<br>{{student.full_name}}<br>{{student.student_id}}<br>{{student.gender}}<br>{{student.department}}<br>{{student.program}}<br>{{student.class_level}}<br>{{student.qualification}}<br>{{student.issue_date}}<br>{{student.expiry_date}}<br>{{student.status}}<br>{{student.signature}}</div>
-                                            <p class="fw-semibold mt-3 mb-1">Organization</p>
-                                            <div class="code-block">{{organization.logo}}<br>{{organization.name}}<br>{{organization.address}}<br>{{organization.phone}}<br>{{organization.email}}<br>{{organization.website}}</div>
-                                            <p class="fw-semibold mt-3 mb-1">QR</p>
-                                            <div class="code-block">{{card.qr_code}}<br>{{card.barcode}}<br>{{card.serial_number}}<br>{{card.verification_code}}</div>
-                                            <p class="fw-semibold mt-3 mb-1">Authorized</p>
-                                            <div class="code-block">{{authorized.signature}}<br>{{authorized.name}}</div>
-                                            <p class="fw-semibold mt-3 mb-1">Theme</p>
-                                            <div class="code-block">{{theme.primary_color}}<br>{{theme.secondary_color}}<br>{{theme.accent_color}}</div>
-                                        </div>
-                                    </div>
-                                </div>
+                            <div class="tag-toolbar">
+                                <div class="fw-semibold mb-2">Organization</div>
+                                <button type="button" class="btn btn-sm btn-outline-secondary tag-button" data-tag="{{organization.logo}}">Logo</button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary tag-button" data-tag="{{organization.name}}">Name</button>
                             </div>
-                            <div class="accordion-item">
-                                <h3 class="accordion-header">
-                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#guideExamples">
-                                        Example Layouts
-                                    </button>
-                                </h3>
-                                <div id="guideExamples" class="accordion-collapse collapse" data-bs-parent="#guideAccordion">
-                                    <div class="accordion-body">
-                                        <p class="small mb-2"><strong>Front HTML example</strong></p>
-                                        <div class="code-block">&lt;div style="padding:24px;background-image:url('{{template.front_background}}');"&gt;<br>  &lt;img src="{{organization.logo}}" alt="logo" style="max-height:56px;"&gt;<br>  &lt;img src="{{student.photo}}" alt="student" style="width:120px;height:140px;object-fit:cover;"&gt;<br>  &lt;h2&gt;{{student.full_name}}&lt;/h2&gt;<br>  &lt;p&gt;{{student.student_id}}&lt;/p&gt;<br>  &lt;div&gt;{{card.qr_code}}&lt;/div&gt;<br>&lt;/div&gt;</div>
-                                        <p class="small mt-3 mb-2"><strong>Back HTML example</strong></p>
-                                        <div class="code-block">&lt;div style="padding:24px;background-image:url('{{template.back_background}}');"&gt;<br>  &lt;h3&gt;Institution Details&lt;/h3&gt;<br>  &lt;p&gt;{{organization.name}}&lt;/p&gt;<br>  &lt;p&gt;{{organization.address}}&lt;/p&gt;<br>  &lt;div&gt;{{student.signature}}&lt;/div&gt;<br>&lt;/div&gt;</div>
-                                    </div>
-                                </div>
+                            <div class="tag-toolbar">
+                                <div class="fw-semibold mb-2">Card</div>
+                                <button type="button" class="btn btn-sm btn-outline-secondary tag-button" data-tag="{{card.qr_code}}">QR Code</button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary tag-button" data-tag="{{card.barcode}}">Barcode</button>
+                            </div>
+                            <div class="tag-toolbar">
+                                <div class="fw-semibold mb-2">Template</div>
+                                <button type="button" class="btn btn-sm btn-outline-secondary tag-button" data-tag="{{template.front_background}}">Front Background</button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary tag-button" data-tag="{{template.back_background}}">Back Background</button>
+                            </div>
+                            <div class="tag-toolbar">
+                                <div class="fw-semibold mb-2">Theme</div>
+                                <button type="button" class="btn btn-sm btn-outline-secondary tag-button" data-tag="{{theme.primary_color}}">Primary Color</button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary tag-button" data-tag="{{theme.secondary_color}}">Secondary Color</button>
                             </div>
                         </div>
+                    </div>
+                </div>
+                <div class="card shadow-sm guide-card">
+                    <div class="card-body">
+                        <h2 class="h6">Template Guide</h2>
+                        <p class="small mb-2">Use <code>{{template.front_background}}</code> and <code>{{template.back_background}}</code> for the backgrounds.</p>
+                        <p class="small mb-1"><strong>Available tags</strong></p>
+                        <div class="code-block mb-2">{{student.full_name}}<br>{{student.student_id}}<br>{{organization.logo}}<br>{{card.qr_code}}<br>{{theme.primary_color}}</div>
+                        <p class="small mb-1"><strong>Example</strong></p>
+                        <div class="code-block">&lt;div style="background-image:url('{{template.front_background}}');"&gt;&lt;img src="{{organization.logo}}"&gt;&lt;h2&gt;{{student.full_name}}&lt;/h2&gt;&lt;/div&gt;</div>
                     </div>
                 </div>
             </div>
