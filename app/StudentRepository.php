@@ -53,4 +53,32 @@ final class StudentRepository
             ':id' => $id,
         ]);
     }
+
+    public function generateStudentNumber(int $id, string $firstName, string $lastName): string
+    {
+        $existing = $this->findById($id);
+        if ($existing && !empty($existing['student_number'])) {
+            return (string) $existing['student_number'];
+        }
+
+        $cleanFirst = preg_replace('/[^A-Za-z]/', '', $firstName) ?: 'STU';
+        $cleanLast = preg_replace('/[^A-Za-z]/', '', $lastName) ?: 'STU';
+
+        $prefix = strtoupper(substr($cleanLast, 0, 3) . substr($cleanFirst, 0, 2));
+        $prefix = $prefix !== '' ? $prefix : 'STU';
+
+        $statement = $this->connection->prepare('SELECT student_number FROM students WHERE student_number LIKE :prefix LIMIT 1');
+        $statement->execute([':prefix' => $prefix . '%']);
+        $matches = $statement->fetchAll();
+
+        $sequence = count($matches) + 1;
+        $studentNumber = $prefix . str_pad((string) $sequence, 2, '0', STR_PAD_LEFT);
+
+        $this->connection->prepare('UPDATE students SET student_number = :student_number WHERE id = :id')->execute([
+            ':student_number' => $studentNumber,
+            ':id' => $id,
+        ]);
+
+        return $studentNumber;
+    }
 }
