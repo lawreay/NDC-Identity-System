@@ -106,6 +106,30 @@ $status = (string) ($student['status'] ?? '');
             padding: 16px 28px;
             color: #4b5b72;
         }
+
+        @media print {
+            body {
+                background: #ffffff;
+                padding: 0;
+            }
+            .container {
+                max-width: 100% !important;
+                padding: 0 !important;
+            }
+            .btn, .d-flex.justify-content-between.align-items-center.mb-4 {
+                display: none !important;
+            }
+            .id-card {
+                box-shadow: none !important;
+                border: 1px solid #d9e3ef;
+                border-radius: 0;
+                max-width: 100%;
+            }
+            .id-header, .id-body, .footer-bar {
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+        }
     </style>
 </head>
 <body>
@@ -115,7 +139,10 @@ $status = (string) ($student['status'] ?? '');
                 <h1 class="h3 mb-1">Student ID Preview</h1>
                 <p class="text-muted mb-0">Professional preview only — no PDF or print output.</p>
             </div>
-            <a href="student-profile.php?id=<?= (int) $id ?>" class="btn btn-outline-secondary">Back to profile</a>
+            <div class="d-flex gap-2">
+                <a href="student-profile.php?id=<?= (int) $id ?>" class="btn btn-outline-secondary">Back to profile</a>
+                <button type="button" class="btn btn-primary" onclick="window.print()">Export PDF</button>
+            </div>
         </div>
 
         <div class="id-card">
