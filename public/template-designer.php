@@ -105,9 +105,10 @@ if ($template !== null && is_array($template)) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Template Designer</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.css">
     <style>
         body { background: #f6f8fb; }
-        .preview-frame { border: 1px solid #d9e2ef; border-radius: 12px; background: #fff; min-height: 320px; padding: 16px; overflow:auto; }
+        .preview-frame { border: 1px solid #d9eef; border-radius: 12px; background: #fff; min-height: 320px; padding: 16px; overflow:auto; }
         .guide-card { border-left: 4px solid #0d6efd; }
         .code-block { background: #111827; color: #f9fafb; padding: 12px; border-radius: 10px; overflow-x: auto; }
         .editor { min-height: 420px; border: 1px solid #d9e2ef; border-radius: 10px; background: #fff; }
@@ -121,6 +122,7 @@ if ($template !== null && is_array($template)) {
         .background-preview { width: 100%; min-height: 120px; border: 1px solid #d9e2ef; border-radius: 12px; background: #f8f9fa; background-size: cover; background-position: center; display: flex; align-items: center; justify-content: center; color: #6c757d; text-align: center; }
         .background-preview img { max-width: 100%; height: auto; border-radius: 12px; }
         .toggle-button-group .btn { min-width: 120px; }
+        .CodeMirror { height: 420px; }
     </style>
 </head>
 <body>
@@ -359,5 +361,95 @@ if ($template !== null && is_array($template)) {
     <?php endif; ?>
 </div>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/mode/xml/xml.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/mode/javascript/javascript.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/mode/css/css.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/mode/htmlmixed/htmlmixed.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/addon/edit/closebrackets.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/addon/edit/matchbrackets.min.js"></script>
+<script>
+    const frontEditor = CodeMirror(document.getElementById('frontEditor'), {
+        value: document.getElementById('frontHtmlInput').value,
+        mode: 'htmlmixed',
+        lineNumbers: true,
+        autoCloseBrackets: true,
+        matchBrackets: true,
+        theme: 'default',
+    });
+
+    const backEditor = CodeMirror(document.getElementById('backEditor'), {
+        value: document.getElementById('backHtmlInput').value,
+        mode: 'htmlmixed',
+        lineNumbers: true,
+        autoCloseBrackets: true,
+        matchBrackets: true,
+        theme: 'default',
+    });
+
+    function renderLivePreview() {
+        const front = frontEditor.getValue();
+        const back = backEditor.getValue();
+        document.getElementById('livePreviewFront').innerHTML = front;
+        document.getElementById('livePreviewBack').innerHTML = back;
+        document.getElementById('frontHtmlInput').value = front;
+        document.getElementById('backHtmlInput').value = back;
+    }
+
+    const debounce = (fn, delay) => {
+        let timer;
+        return (...args) => {
+            clearTimeout(timer);
+            timer = setTimeout(() => fn(...args), delay);
+        };
+    };
+
+    const debouncedRender = debounce(renderLivePreview, 450);
+    frontEditor.on('change', debouncedRender);
+    backEditor.on('change', debouncedRender);
+
+    document.getElementById('frontTab').addEventListener('click', () => {
+        document.getElementById('frontEditor').classList.remove('d-none');
+        document.getElementById('backEditor').classList.add('d-none');
+        document.getElementById('frontTab').classList.add('active');
+        document.getElementById('backTab').classList.remove('active');
+        frontEditor.refresh();
+    });
+
+    document.getElementById('backTab').addEventListener('click', () => {
+        document.getElementById('backEditor').classList.remove('d-none');
+        document.getElementById('frontEditor').classList.add('d-none');
+        document.getElementById('backTab').classList.add('active');
+        document.getElementById('frontTab').classList.remove('active');
+        backEditor.refresh();
+    });
+
+    document.querySelectorAll('.tag-button').forEach(button => {
+        button.addEventListener('click', () => {
+            const tag = button.dataset.tag;
+            const activeEditor = document.getElementById('frontEditor').classList.contains('d-none') ? backEditor : frontEditor;
+            const doc = activeEditor.getDoc();
+            const cursor = doc.getCursor();
+            doc.replaceRange(tag, cursor);
+            activeEditor.focus();
+        });
+    });
+
+    document.getElementById('removeFrontBackgroundBtn').addEventListener('click', () => {
+        document.getElementById('frontBackgroundPreview').style.backgroundImage = 'none';
+        document.getElementById('frontBackgroundPreview').textContent = 'No front background uploaded';
+        document.getElementById('remove_front_background').value = '1';
+        document.getElementById('frontBackgroundInput').value = '';
+    });
+
+    document.getElementById('removeBackBackgroundBtn').addEventListener('click', () => {
+        document.getElementById('backBackgroundPreview').style.backgroundImage = 'none';
+        document.getElementById('backBackgroundPreview').textContent = 'No back background uploaded';
+        document.getElementById('remove_back_background').value = '1';
+        document.getElementById('backBackgroundInput').value = '';
+    });
+
+    renderLivePreview();
+</script>
 </body>
 </html>
