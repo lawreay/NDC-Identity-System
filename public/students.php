@@ -28,6 +28,7 @@ try {
                 <h1 class="h3 mb-1">Student List</h1>
                 <p class="text-muted mb-0">Browse students and open their profile.</p>
             </div>
+            <a href="template-designer.php" class="btn btn-outline-primary">Template Designer</a>
         </div>
 
         <form method="get" action="students.php" class="row g-2 mb-4">
