@@ -45,7 +45,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (is_array($uploadedSignature) && !empty($uploadedSignature['tmp_name'])) {
         $signaturePath = storeUpload($uploadedSignature, $uploadRoot, 'authorized_signature');
         if ($signaturePath !== null) {
-            $input['authorized_signature_path'] = $signaturePath;
+            $input['principal_signature_path'] = $signaturePath;
         }
     }
 

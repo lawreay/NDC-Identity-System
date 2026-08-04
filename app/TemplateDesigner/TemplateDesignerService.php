@@ -667,8 +667,19 @@ HTML;
             return is_file($normalized) ? $normalized : null;
         }
 
-        $absolutePath = dirname(__DIR__, 2) . DIRECTORY_SEPARATOR . ltrim($normalized, DIRECTORY_SEPARATOR);
-        return is_file($absolutePath) ? $absolutePath : null;
+        $projectRoot = dirname(__DIR__, 2);
+        $candidatePaths = [
+            $projectRoot . DIRECTORY_SEPARATOR . ltrim($normalized, DIRECTORY_SEPARATOR),
+            $projectRoot . DIRECTORY_SEPARATOR . 'public' . DIRECTORY_SEPARATOR . ltrim($normalized, DIRECTORY_SEPARATOR),
+        ];
+
+        foreach ($candidatePaths as $candidate) {
+            if (is_file($candidate)) {
+                return $candidate;
+            }
+        }
+
+        return null;
     }
 
     private function authorizedSignatureHtml(?string $path): string
