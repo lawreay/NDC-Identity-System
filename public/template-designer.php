@@ -456,15 +456,6 @@ if ($template !== null && is_array($template)) {
         theme: 'default',
     });
 
-    function renderLivePreview() {
-        const front = frontEditor.getValue();
-        const back = backEditor.getValue();
-        document.getElementById('livePreviewFront').innerHTML = front;
-        document.getElementById('livePreviewBack').innerHTML = back;
-        document.getElementById('frontHtmlInput').value = front;
-        document.getElementById('backHtmlInput').value = back;
-    }
-
     const debounce = (fn, delay) => {
         let timer;
         return (...args) => {
@@ -472,26 +463,6 @@ if ($template !== null && is_array($template)) {
             timer = setTimeout(() => fn(...args), delay);
         };
     };
-
-    const debouncedRender = debounce(renderLivePreview, 450);
-    frontEditor.on('change', debouncedRender);
-    backEditor.on('change', debouncedRender);
-
-    document.getElementById('frontTab').addEventListener('click', () => {
-        document.getElementById('frontEditor').classList.remove('d-none');
-        document.getElementById('backEditor').classList.add('d-none');
-        document.getElementById('frontTab').classList.add('active');
-        document.getElementById('backTab').classList.remove('active');
-        frontEditor.refresh();
-    });
-
-    document.getElementById('backTab').addEventListener('click', () => {
-        document.getElementById('backEditor').classList.remove('d-none');
-        document.getElementById('frontEditor').classList.add('d-none');
-        document.getElementById('backTab').classList.add('active');
-        document.getElementById('frontTab').classList.remove('active');
-        backEditor.refresh();
-    });
 
     const livePreviewValues = {
         'student.full_name': <?= json_encode($student['full_name'] ?? 'Student Name', JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>,
@@ -539,7 +510,11 @@ if ($template !== null && is_array($template)) {
         document.getElementById('backHtmlInput').value = backEditor.getValue();
     }
 
-    const debounce = (fn, delay) => {
+    const debouncedRender = debounce(renderLivePreview, 450);
+    frontEditor.on('change', debouncedRender);
+    backEditor.on('change', debouncedRender);
+
+    document.querySelectorAll('.tag-button').forEach(button => {
         button.addEventListener('click', () => {
             const tag = button.dataset.tag;
             const activeEditor = document.getElementById('frontEditor').classList.contains('d-none') ? backEditor : frontEditor;
@@ -548,6 +523,22 @@ if ($template !== null && is_array($template)) {
             doc.replaceRange(tag, cursor);
             activeEditor.focus();
         });
+    });
+
+    document.getElementById('frontTab').addEventListener('click', () => {
+        document.getElementById('frontEditor').classList.remove('d-none');
+        document.getElementById('backEditor').classList.add('d-none');
+        document.getElementById('frontTab').classList.add('active');
+        document.getElementById('backTab').classList.remove('active');
+        frontEditor.refresh();
+    });
+
+    document.getElementById('backTab').addEventListener('click', () => {
+        document.getElementById('backEditor').classList.remove('d-none');
+        document.getElementById('frontEditor').classList.add('d-none');
+        document.getElementById('backTab').classList.add('active');
+        document.getElementById('frontTab').classList.remove('active');
+        backEditor.refresh();
     });
 
     document.getElementById('removeFrontBackgroundBtn').addEventListener('click', () => {
