@@ -94,8 +94,9 @@ function escape(string $value): string
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
         body { background: #f6f8fb; }
-        .preview-frame { border: 1px solid #d9eef; border-radius: 12px; background: #fff; min-height: 560px; padding: 16px; overflow:auto; display:flex; justify-content:center; align-items:center; }
-        .preview-frame .ndc-id-card-wrapper { box-shadow: 0 10px 30px rgba(0,0,0,0.08); width:856px; height:540px; }
+        .preview-frame { border: 1px solid #d9e2ef; border-radius: 12px; background: #fff; min-height: 360px; padding: 16px; overflow:auto; display:flex; justify-content:center; align-items:center; }
+        .preview-frame .ndc-id-card-wrapper { box-shadow: 0 10px 30px rgba(0,0,0,0.08); width:min(856px, 100%); aspect-ratio:856 / 540; height:auto; flex:0 0 auto; }
+        .preview-frame .ndc-id-card-wrapper > * { box-sizing:border-box; }
         .template-selector { min-width: 220px; }
     </style>
 </head>

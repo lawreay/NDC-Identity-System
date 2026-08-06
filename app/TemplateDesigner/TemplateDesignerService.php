@@ -339,7 +339,7 @@ final class TemplateDesignerService
     {
         $width = self::CARD_WIDTH;
         $height = self::CARD_HEIGHT;
-        return '<div class="ndc-id-card-wrapper" style="width:' . $width . 'px;height:' . $height . 'px;box-sizing:border-box;overflow:hidden;position:relative;background:#fff;border:1px solid #d1d5db;border-radius:10px;">' . $html . '</div>';
+        return '<div class="ndc-id-card-wrapper" style="width:100%;max-width:' . $width . 'px;aspect-ratio:' . $width . '/' . $height . ';height:auto;box-sizing:border-box;overflow:hidden;position:relative;background:#fff;border:1px solid #d1d5db;border-radius:10px;">' . $html . '</div>';
     }
 
     /**
@@ -356,7 +356,7 @@ final class TemplateDesignerService
     public function defaultFrontHtml(): string
     {
         return <<<'HTML'
-<div style="width:100%;min-height:100%;padding:10px;background-image:url('{{template.front_background}}');background-size:cover;background-position:center;color:#111;font-family:Arial,sans-serif;box-sizing:border-box;">
+<div style="width:100%;height:100%;padding:10px;background-image:url('{{template.front_background}}');background-size:cover;background-position:center;color:#111;font-family:Arial,sans-serif;box-sizing:border-box;overflow:hidden;">
   <div style="width:100%;height:100%;background:rgba(255,255,255,0.96);border-radius:14px;display:grid;grid-template-rows:auto 1fr auto;gap:8px;padding:10px;box-sizing:border-box;overflow:hidden;">
     <div style="display:flex;align-items:center;gap:10px;padding-bottom:4px;border-bottom:1px solid #d9dce0;">
       <img src="{{organization.logo}}" alt="Logo" style="width:54px;height:54px;object-fit:contain;">
@@ -381,7 +381,7 @@ final class TemplateDesignerService
           </div>
           <div>
             <div style="font-size:8px;text-transform:uppercase;letter-spacing:1px;color:#666;">Valid</div>
-            <div style="font-weight:700;color:{{theme.primary_color}};">{{student.issue_date}} – {{student.expiry_date}}</div>
+            <div style="font-weight:700;color:{{theme.primary_color}};">{{student.issue_date}} - {{student.expiry_date}}</div>
           </div>
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:10px;color:#333;">
@@ -424,7 +424,7 @@ HTML;
     public function defaultBackHtml(): string
     {
         return <<<'HTML'
-<div style="width:100%;min-height:100%;padding:8px;background-image:url('{{template.back_background}}');background-size:cover;background-position:center;color:#111;font-family:Arial,sans-serif;box-sizing:border-box;">
+<div style="width:100%;height:100%;padding:8px;background-image:url('{{template.back_background}}');background-size:cover;background-position:center;color:#111;font-family:Arial,sans-serif;box-sizing:border-box;overflow:hidden;">
   <div style="width:100%;height:100%;background:rgba(255,255,255,0.96);border-radius:14px;display:grid;grid-template-rows:auto 1fr auto;gap:10px;padding:10px;box-sizing:border-box;overflow:hidden;">
     <div style="text-align:center;">
       <div style="font-size:10px;text-transform:uppercase;letter-spacing:1px;color:{{theme.secondary_color}};font-weight:700;">Important</div>

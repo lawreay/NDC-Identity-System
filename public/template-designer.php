@@ -152,8 +152,9 @@ if ($template !== null && is_array($template)) {
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.css">
     <style>
         body { background: #f6f8fb; }
-        .preview-frame { border: 1px solid #d9eef; border-radius: 12px; background: #fff; min-height: 560px; padding: 16px; overflow:auto; display:flex; justify-content:center; align-items:center; }
-        .preview-frame .ndc-id-card-wrapper { box-shadow: 0 10px 30px rgba(0,0,0,0.08); width:856px; height:540px; }
+        .preview-frame { border: 1px solid #d9e2ef; border-radius: 12px; background: #fff; min-height: 360px; padding: 16px; overflow:auto; display:flex; justify-content:center; align-items:center; }
+        .preview-frame .ndc-id-card-wrapper { box-shadow: 0 10px 30px rgba(0,0,0,0.08); width:min(856px, 100%); aspect-ratio:856 / 540; height:auto; flex:0 0 auto; }
+        .preview-frame .ndc-id-card-wrapper > * { box-sizing:border-box; }
         .guide-card { border-left: 4px solid #0d6efd; }
         .code-block { background: #111827; color: #f9fafb; padding: 12px; border-radius: 10px; overflow-x: auto; }
         .editor { min-height: 420px; border: 1px solid #d9e2ef; border-radius: 10px; background: #fff; }
@@ -516,10 +517,14 @@ if ($template !== null && is_array($template)) {
     function renderLivePreview() {
         const front = renderTemplateHtml(frontEditor.getValue());
         const back = renderTemplateHtml(backEditor.getValue());
-        document.getElementById('livePreviewFront').innerHTML = front;
-        document.getElementById('livePreviewBack').innerHTML = back;
+        document.getElementById('livePreviewFront').innerHTML = wrapPreviewCard(front);
+        document.getElementById('livePreviewBack').innerHTML = wrapPreviewCard(back);
         document.getElementById('frontHtmlInput').value = frontEditor.getValue();
         document.getElementById('backHtmlInput').value = backEditor.getValue();
+    }
+
+    function wrapPreviewCard(html) {
+        return '<div class="ndc-id-card-wrapper" style="box-sizing:border-box;overflow:hidden;position:relative;background:#fff;border:1px solid #d1d5db;border-radius:10px;">' + html + '</div>';
     }
 
     const debouncedRender = debounce(renderLivePreview, 450);
