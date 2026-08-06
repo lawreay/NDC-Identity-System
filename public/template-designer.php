@@ -122,6 +122,9 @@ $student = [
 ];
 $organization = [
     'name' => $appSettings['organization_name'] ?? 'NDC',
+    'school_name' => $appSettings['school_name'] ?? $appSettings['organization_name'] ?? 'NDC',
+    'campus_name' => $appSettings['campus_name'] ?? '',
+    'academic_programs' => $appSettings['academic_programs'] ?? '',
     'address' => $appSettings['organization_address'] ?? 'Ntcheu',
     'phone' => $appSettings['organization_phone'] ?? '+265 999 000 000',
     'email' => $appSettings['organization_email'] ?? 'info@ndc.edu',
@@ -163,6 +166,7 @@ if ($template !== null && is_array($template)) {
         .editor-tab.active { background: #0d6efd; color: #fff; }
         .tag-toolbox { gap: 0.5rem; display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); }
         .tag-toolbar { border: 1px solid #dee2e6; border-radius: 0.75rem; padding: 0.75rem; background: #fff; }
+        .tag-toolbar .tag-button { margin: 0 0.25rem 0.35rem 0; }
         .tag-button { display: inline-flex; align-items: center; justify-content: center; gap: 0.35rem; }
         .field-panel { border: 1px solid #dee2e6; border-radius: 0.75rem; padding: 1rem; background: #fff; }
         .background-preview { width: 100%; min-height: 120px; border: 1px solid #d9e2ef; border-radius: 12px; background: #f8f9fa; background-size: cover; background-position: center; display: flex; align-items: center; justify-content: center; color: #6c757d; text-align: center; }
@@ -404,21 +408,48 @@ if ($template !== null && is_array($template)) {
                                 <button type="button" class="btn btn-sm btn-outline-secondary tag-button" data-tag="{{student.full_name}}">Full Name</button>
                                 <button type="button" class="btn btn-sm btn-outline-secondary tag-button" data-tag="{{student.student_id}}">Student ID</button>
                                 <button type="button" class="btn btn-sm btn-outline-secondary tag-button" data-tag="{{student.photo}}">Photo</button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary tag-button" data-tag="{{student.gender}}">Gender</button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary tag-button" data-tag="{{student.program}}">Program</button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary tag-button" data-tag="{{student.department}}">Department</button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary tag-button" data-tag="{{student.class_level}}">Class</button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary tag-button" data-tag="{{student.qualification}}">Qualification</button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary tag-button" data-tag="{{student.issue_date}}">Issue Date</button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary tag-button" data-tag="{{student.expiry_date}}">Expiry Date</button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary tag-button" data-tag="{{student.status}}">Status</button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary tag-button" data-tag="{{student.signature}}">Signature</button>
                             </div>
                             <div class="tag-toolbar">
-                                <div class="fw-semibold mb-2">Organization</div>
+                                <div class="fw-semibold mb-2">Settings</div>
                                 <button type="button" class="btn btn-sm btn-outline-secondary tag-button" data-tag="{{organization.logo}}">Logo</button>
                                 <button type="button" class="btn btn-sm btn-outline-secondary tag-button" data-tag="{{organization.name}}">Name</button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary tag-button" data-tag="{{organization.school_name}}">School Name</button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary tag-button" data-tag="{{organization.campus_name}}">Campus</button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary tag-button" data-tag="{{organization.address}}">Address</button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary tag-button" data-tag="{{organization.phone}}">Phone</button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary tag-button" data-tag="{{organization.email}}">Email</button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary tag-button" data-tag="{{organization.website}}">Website</button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary tag-button" data-tag="{{organization.academic_programs}}">Programs</button>
                             </div>
                             <div class="tag-toolbar">
                                 <div class="fw-semibold mb-2">Card</div>
                                 <button type="button" class="btn btn-sm btn-outline-secondary tag-button" data-tag="{{card.qr_code}}">QR Code</button>
                                 <button type="button" class="btn btn-sm btn-outline-secondary tag-button" data-tag="{{card.barcode}}">Barcode</button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary tag-button" data-tag="{{card.serial_number}}">Serial</button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary tag-button" data-tag="{{card.verification_code}}">Verify Code</button>
+                            </div>
+                            <div class="tag-toolbar">
+                                <div class="fw-semibold mb-2">Signature</div>
+                                <button type="button" class="btn btn-sm btn-outline-secondary tag-button" data-tag="{{authorized.signature}}">Signature Image</button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary tag-button" data-tag="{{authorized.name}}">Signatory Name</button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary tag-button" data-tag="{{principal.signature}}">Principal Sig.</button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary tag-button" data-tag="{{principal.name}}">Principal Name</button>
                             </div>
                             <div class="tag-toolbar">
                                 <div class="fw-semibold mb-2">Template</div>
                                 <button type="button" class="btn btn-sm btn-outline-secondary tag-button" data-tag="{{template.front_background}}">Front Background</button>
                                 <button type="button" class="btn btn-sm btn-outline-secondary tag-button" data-tag="{{template.back_background}}">Back Background</button>
+                                <button type="button" class="btn btn-sm btn-outline-primary tag-button" data-tag="background-image:url('{{template.front_background}}');background-size:cover;background-position:center;">Front BG CSS</button>
+                                <button type="button" class="btn btn-sm btn-outline-primary tag-button" data-tag="background-image:url('{{template.back_background}}');background-size:cover;background-position:center;">Back BG CSS</button>
                             </div>
                             <div class="tag-toolbar">
                                 <div class="fw-semibold mb-2">Theme</div>
@@ -431,9 +462,9 @@ if ($template !== null && is_array($template)) {
                 <div class="card shadow-sm guide-card">
                     <div class="card-body">
                         <h2 class="h6">Template Guide</h2>
-                        <p class="small mb-2">Use <code>{{template.front_background}}</code> and <code>{{template.back_background}}</code> for the backgrounds.</p>
+                        <p class="small mb-2">Upload front/back images above, then use the template background tags inside <code>background-image:url(...)</code>.</p>
                         <p class="small mb-1"><strong>Available tags</strong></p>
-                        <div class="code-block mb-2">{{student.full_name}}<br>{{student.student_id}}<br>{{organization.logo}}<br>{{card.qr_code}}<br>{{theme.primary_color}}</div>
+                        <div class="code-block mb-2">{{student.full_name}}<br>{{student.student_id}}<br>{{organization.logo}}<br>{{authorized.signature}}<br>{{card.qr_code}}<br>{{theme.primary_color}}</div>
                         <p class="small mb-1"><strong>Example</strong></p>
                         <div class="code-block">&lt;div style="background-image:url('{{template.front_background}}');"&gt;&lt;img src="{{organization.logo}}"&gt;&lt;h2&gt;{{student.full_name}}&lt;/h2&gt;&lt;/div&gt;</div>
                     </div>
@@ -488,12 +519,20 @@ if ($template !== null && is_array($template)) {
         'student.issue_date': <?= json_encode($student['issue_date'] ?? '2026-01-20', JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>,
         'student.expiry_date': <?= json_encode($student['expiry_date'] ?? '2027-01-20', JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>,
         'student.status': <?= json_encode($student['status'] ?? 'Active', JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>,
+        'student.signature': '<div style="display:inline-block;width:140px;height:44px;border-bottom:2px solid #111;padding-top:24px;text-align:center;font-size:12px;color:#111;">Student signature</div>',
         'organization.name': <?= json_encode($organization['name'] ?? 'NDC', JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>,
+        'organization.school_name': <?= json_encode($organization['school_name'] ?? 'NDC', JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>,
+        'organization.campus_name': <?= json_encode($organization['campus_name'] ?? '', JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>,
+        'organization.academic_programs': <?= json_encode(nl2br(htmlspecialchars((string) ($organization['academic_programs'] ?? ''), ENT_QUOTES, 'UTF-8')), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>,
         'organization.address': <?= json_encode($organization['address'] ?? 'Ntcheu', JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>,
         'organization.phone': <?= json_encode($organization['phone'] ?? '+265 999 000 000', JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>,
         'organization.email': <?= json_encode($organization['email'] ?? 'info@ndc.edu', JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>,
         'organization.website': <?= json_encode($organization['website'] ?? 'https://ndc.edu', JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>,
         'authorized.name': <?= json_encode($organization['authorized_name'] ?? 'Authorized Officer', JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>,
+        'authorized.signature': <?= json_encode($service->authorizedSignatureHtml($organization['authorized_signature_path'] ?? ''), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>,
+        'principal.name': <?= json_encode($organization['authorized_name'] ?? 'Authorized Officer', JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>,
+        'principal.signature': <?= json_encode($service->authorizedSignatureHtml($organization['authorized_signature_path'] ?? ''), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>,
+        'organization.signature': <?= json_encode($service->authorizedSignatureHtml($organization['authorized_signature_path'] ?? ''), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>,
         'theme.primary_color': <?= json_encode($theme['primary_color'] ?? '#0b5ed7', JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>,
         'theme.secondary_color': <?= json_encode($theme['secondary_color'] ?? '#0a7e8c', JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>,
         'theme.accent_color': <?= json_encode($theme['accent_color'] ?? '#f4b400', JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>,
@@ -501,8 +540,10 @@ if ($template !== null && is_array($template)) {
         'template.back_background': <?= json_encode($service->renderBackgroundImageTag($template['back_background_path'] ?? ''), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>,
         'card.qr_code': '<div style="display:inline-flex;align-items:center;justify-content:center;width:90px;height:90px;border:2px dashed #999;font-size:11px;color:#666;">QR</div>',
         'card.barcode': '<div style="display:inline-flex;align-items:center;justify-content:center;width:140px;height:44px;border:2px dashed #999;font-size:11px;color:#666;">Barcode</div>',
+        'card.serial_number': <?= json_encode($student['student_number'] ?? 'BND001', JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>,
+        'card.verification_code': <?= json_encode($student['student_number'] ?? 'BND001', JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>,
         'student.photo': 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==',
-        'organization.logo': 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw=='
+        'organization.logo': <?= json_encode($service->renderImageTag($organization['logo_path'] ?? '', 'Organization logo'), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>
     };
 
     function renderTemplateHtml(html) {
@@ -573,6 +614,8 @@ if ($template !== null && is_array($template)) {
         document.getElementById('frontBackgroundPreview').textContent = 'No front background uploaded';
         document.getElementById('remove_front_background').value = '1';
         document.getElementById('frontBackgroundInput').value = '';
+        livePreviewValues['template.front_background'] = '';
+        renderLivePreview();
     });
 
     document.getElementById('removeBackBackgroundBtn').addEventListener('click', () => {
@@ -580,7 +623,38 @@ if ($template !== null && is_array($template)) {
         document.getElementById('backBackgroundPreview').textContent = 'No back background uploaded';
         document.getElementById('remove_back_background').value = '1';
         document.getElementById('backBackgroundInput').value = '';
+        livePreviewValues['template.back_background'] = '';
+        renderLivePreview();
     });
+
+    function bindBackgroundPreview(inputId, previewId, removeId, removeFieldId, tagKey, emptyText) {
+        const input = document.getElementById(inputId);
+        const preview = document.getElementById(previewId);
+        const removeButton = document.getElementById(removeId);
+        const removeField = document.getElementById(removeFieldId);
+
+        input.addEventListener('change', () => {
+            const file = input.files && input.files[0] ? input.files[0] : null;
+            if (!file) {
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.addEventListener('load', () => {
+                const imageUrl = String(reader.result || '');
+                preview.style.backgroundImage = "url('" + imageUrl + "')";
+                preview.textContent = '';
+                removeField.value = '0';
+                removeButton.disabled = false;
+                livePreviewValues[tagKey] = imageUrl;
+                renderLivePreview();
+            });
+            reader.readAsDataURL(file);
+        });
+    }
+
+    bindBackgroundPreview('frontBackgroundInput', 'frontBackgroundPreview', 'removeFrontBackgroundBtn', 'remove_front_background', 'template.front_background', 'No front background uploaded');
+    bindBackgroundPreview('backBackgroundInput', 'backBackgroundPreview', 'removeBackBackgroundBtn', 'remove_back_background', 'template.back_background', 'No back background uploaded');
 
     renderLivePreview();
 </script>

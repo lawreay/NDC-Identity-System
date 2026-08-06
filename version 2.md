@@ -286,3 +286,15 @@ Watermarks
 Custom Images
 
 That future-proofs the system.
+
+Monaco/CodeMirror editor.
+Live preview.
+Tag toolbox.
+HTML validation.
+Background image management.
+
+I would not build:
+
+Layers
+Drag & Drop
+Visual Editor

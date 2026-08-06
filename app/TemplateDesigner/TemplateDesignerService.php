@@ -294,9 +294,17 @@ final class TemplateDesignerService
             $payload = $template['back_html'] ?? '';
         }
 
+        $fullName = trim((string) ($student['full_name'] ?? ''));
+        if ($fullName === '') {
+            $fullName = trim((string) ($student['first_name'] ?? '') . ' ' . (string) ($student['last_name'] ?? ''));
+        }
+        if ($fullName === '') {
+            $fullName = 'Student Name';
+        }
+
         $replacements = [
             'student.photo' => $this->renderImageTag($this->imagePath($student['photo_path'] ?? ''), 'Student photo'),
-            'student.full_name' => htmlspecialchars((string) ($student['full_name'] ?? $student['first_name'] . ' ' . $student['last_name'] ?? 'Student Name'), ENT_QUOTES, 'UTF-8'),
+            'student.full_name' => htmlspecialchars($fullName, ENT_QUOTES, 'UTF-8'),
             'student.student_id' => htmlspecialchars((string) ($student['student_number'] ?? 'N/A'), ENT_QUOTES, 'UTF-8'),
             'student.gender' => htmlspecialchars((string) ($student['gender'] ?? 'N/A'), ENT_QUOTES, 'UTF-8'),
             'student.department' => htmlspecialchars((string) ($student['department'] ?? 'N/A'), ENT_QUOTES, 'UTF-8'),
@@ -306,9 +314,12 @@ final class TemplateDesignerService
             'student.issue_date' => htmlspecialchars((string) ($student['issue_date'] ?? date('Y-m-d')), ENT_QUOTES, 'UTF-8'),
             'student.expiry_date' => htmlspecialchars((string) ($student['expiry_date'] ?? date('Y-m-d', strtotime('+1 year'))), ENT_QUOTES, 'UTF-8'),
             'student.status' => htmlspecialchars((string) ($student['status'] ?? 'Active'), ENT_QUOTES, 'UTF-8'),
-            'student.signature' => '<div style="display:inline-block;width:140px;height:44px;border-bottom:2px solid #111;padding-top:24px;text-align:center;font-size:12px;color:#111;">Signed</div>',
+            'student.signature' => $this->signatureLineHtml('Student signature'),
             'organization.logo' => $this->renderImageTag($this->imagePath($organization['logo_path'] ?? ''), 'Organization logo'),
             'organization.name' => htmlspecialchars((string) ($organization['name'] ?? 'NDC'), ENT_QUOTES, 'UTF-8'),
+            'organization.school_name' => htmlspecialchars((string) ($organization['school_name'] ?? $organization['name'] ?? 'NDC'), ENT_QUOTES, 'UTF-8'),
+            'organization.campus_name' => htmlspecialchars((string) ($organization['campus_name'] ?? ''), ENT_QUOTES, 'UTF-8'),
+            'organization.academic_programs' => nl2br(htmlspecialchars((string) ($organization['academic_programs'] ?? ''), ENT_QUOTES, 'UTF-8')),
             'organization.address' => htmlspecialchars((string) ($organization['address'] ?? 'Ntcheu'), ENT_QUOTES, 'UTF-8'),
             'organization.phone' => htmlspecialchars((string) ($organization['phone'] ?? '+265 999 000 000'), ENT_QUOTES, 'UTF-8'),
             'organization.email' => htmlspecialchars((string) ($organization['email'] ?? 'info@ndc.edu'), ENT_QUOTES, 'UTF-8'),
@@ -317,10 +328,11 @@ final class TemplateDesignerService
             'card.barcode' => '<div style="display:inline-flex;align-items:center;justify-content:center;width:140px;height:44px;border:2px dashed #999;font-size:11px;color:#666;">Barcode</div>',
             'authorized.signature' => $this->authorizedSignatureHtml($organization['authorized_signature_path'] ?? ''),
             'authorized.name' => htmlspecialchars((string) ($organization['authorized_name'] ?? 'Authorized Officer'), ENT_QUOTES, 'UTF-8'),
+            'principal.signature' => $this->authorizedSignatureHtml($organization['authorized_signature_path'] ?? ''),
+            'principal.name' => htmlspecialchars((string) ($organization['authorized_name'] ?? 'Authorized Officer'), ENT_QUOTES, 'UTF-8'),
+            'organization.signature' => $this->authorizedSignatureHtml($organization['authorized_signature_path'] ?? ''),
             'card.serial_number' => htmlspecialchars((string) ($student['student_number'] ?? 'N/A'), ENT_QUOTES, 'UTF-8'),
             'card.verification_code' => htmlspecialchars((string) ($student['student_number'] ?? 'N/A'), ENT_QUOTES, 'UTF-8'),
-            'authorized.signature' => '<div style="display:inline-block;width:140px;height:44px;border-bottom:2px solid #111;padding-top:24px;text-align:center;font-size:12px;color:#111;">Authorized</div>',
-            'authorized.name' => htmlspecialchars((string) ($organization['authorized_name'] ?? 'Authorized Officer'), ENT_QUOTES, 'UTF-8'),
             'theme.primary_color' => htmlspecialchars((string) ($theme['primary_color'] ?? '#0b5ed7'), ENT_QUOTES, 'UTF-8'),
             'theme.secondary_color' => htmlspecialchars((string) ($theme['secondary_color'] ?? '#0a7e8c'), ENT_QUOTES, 'UTF-8'),
             'theme.accent_color' => htmlspecialchars((string) ($theme['accent_color'] ?? '#f4b400'), ENT_QUOTES, 'UTF-8'),
@@ -441,7 +453,7 @@ HTML;
     <div style="display:grid;grid-template-columns:1fr auto;align-items:end;gap:10px;">
       <div style="display:grid;gap:8px;font-size:10px;color:#333;">
         <div style="font-size:9px;text-transform:uppercase;letter-spacing:1px;color:#666;">Authorized signature</div>
-        <div style="height:42px;border-bottom:1px solid #111;"></div>
+        <div>{{authorized.signature}}</div>
         <div style="font-size:11px;font-weight:700;">{{authorized.name}}</div>
       </div>
       <div style="display:grid;gap:8px;text-align:center;font-size:9px;color:#666;">
@@ -687,19 +699,24 @@ HTML;
         return is_file($publicPath) ? $publicPath : null;
     }
 
-    private function authorizedSignatureHtml(?string $path): string
+    public function authorizedSignatureHtml(?string $path): string
     {
         $imagePath = $this->imagePath($path ?? '');
         if ($imagePath === null) {
-            return '<div style="display:inline-block;width:140px;height:44px;border-bottom:2px solid #111;padding-top:24px;text-align:center;font-size:12px;color:#111;">Authorized</div>';
+            return $this->signatureLineHtml('Authorized');
         }
 
         $imageTag = $this->renderImageTag($imagePath, 'Authorized signature');
         if (str_starts_with($imageTag, 'data:image/gif;base64')) {
-            return '<div style="display:inline-block;width:140px;height:44px;border-bottom:2px solid #111;padding-top:24px;text-align:center;font-size:12px;color:#111;">Authorized</div>';
+            return $this->signatureLineHtml('Authorized');
         }
 
         return '<img src="' . htmlspecialchars($imageTag, ENT_QUOTES, 'UTF-8') . '" alt="Authorized signature" style="max-width:140px;max-height:44px;object-fit:contain;">';
+    }
+
+    private function signatureLineHtml(string $label): string
+    {
+        return '<div style="display:inline-block;width:140px;height:44px;border-bottom:2px solid #111;padding-top:24px;text-align:center;font-size:12px;color:#111;">' . htmlspecialchars($label, ENT_QUOTES, 'UTF-8') . '</div>';
     }
 
     private function validateHtml(string $html, string $side): array

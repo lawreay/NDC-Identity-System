@@ -55,6 +55,9 @@ try {
         $appSettings = $settingsRepository->getAll();
         $organization = [
             'name' => $appSettings['organization_name'] ?? 'NDC',
+            'school_name' => $appSettings['school_name'] ?? $appSettings['organization_name'] ?? 'NDC',
+            'campus_name' => $appSettings['campus_name'] ?? '',
+            'academic_programs' => $appSettings['academic_programs'] ?? '',
             'address' => $appSettings['organization_address'] ?? 'Ntcheu',
             'phone' => $appSettings['organization_phone'] ?? '+265 999 000 000',
             'email' => $appSettings['organization_email'] ?? 'info@ndc.edu',
