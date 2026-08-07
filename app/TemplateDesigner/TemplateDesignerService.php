@@ -302,11 +302,15 @@ final class TemplateDesignerService
             $fullName = 'Student Name';
         }
 
+        $serialNumber = (string) ($student['student_number'] ?? 'N/A');
+        $verificationCode = $this->verificationCode($student, $organization);
+
         $replacements = [
             'student.photo' => $this->renderImageTag($this->imagePath($student['photo_path'] ?? ''), 'Student photo'),
             'student.full_name' => htmlspecialchars($fullName, ENT_QUOTES, 'UTF-8'),
             'student.student_id' => htmlspecialchars((string) ($student['student_number'] ?? 'N/A'), ENT_QUOTES, 'UTF-8'),
             'student.gender' => htmlspecialchars((string) ($student['gender'] ?? 'N/A'), ENT_QUOTES, 'UTF-8'),
+            'student.date_of_birth' => htmlspecialchars((string) ($student['date_of_birth'] ?? 'N/A'), ENT_QUOTES, 'UTF-8'),
             'student.department' => htmlspecialchars((string) ($student['department'] ?? 'N/A'), ENT_QUOTES, 'UTF-8'),
             'student.program' => htmlspecialchars((string) ($student['program'] ?? 'N/A'), ENT_QUOTES, 'UTF-8'),
             'student.class_level' => htmlspecialchars((string) ($student['class_level'] ?? 'N/A'), ENT_QUOTES, 'UTF-8'),
@@ -324,15 +328,15 @@ final class TemplateDesignerService
             'organization.phone' => htmlspecialchars((string) ($organization['phone'] ?? '+265 999 000 000'), ENT_QUOTES, 'UTF-8'),
             'organization.email' => htmlspecialchars((string) ($organization['email'] ?? 'info@ndc.edu'), ENT_QUOTES, 'UTF-8'),
             'organization.website' => htmlspecialchars((string) ($organization['website'] ?? 'https://ndc.edu'), ENT_QUOTES, 'UTF-8'),
-            'card.qr_code' => '<div style="display:inline-flex;align-items:center;justify-content:center;width:90px;height:90px;border:2px dashed #999;font-size:11px;color:#666;">QR</div>',
-            'card.barcode' => '<div style="display:inline-flex;align-items:center;justify-content:center;width:140px;height:44px;border:2px dashed #999;font-size:11px;color:#666;">Barcode</div>',
+            'card.qr_code' => $this->renderQrCodeHtml($verificationCode, $student, $organization),
+            'card.barcode' => $this->renderBarcodeHtml($verificationCode),
             'authorized.signature' => $this->authorizedSignatureHtml($organization['authorized_signature_path'] ?? ''),
             'authorized.name' => htmlspecialchars((string) ($organization['authorized_name'] ?? 'Authorized Officer'), ENT_QUOTES, 'UTF-8'),
             'principal.signature' => $this->authorizedSignatureHtml($organization['authorized_signature_path'] ?? ''),
             'principal.name' => htmlspecialchars((string) ($organization['authorized_name'] ?? 'Authorized Officer'), ENT_QUOTES, 'UTF-8'),
             'organization.signature' => $this->authorizedSignatureHtml($organization['authorized_signature_path'] ?? ''),
-            'card.serial_number' => htmlspecialchars((string) ($student['student_number'] ?? 'N/A'), ENT_QUOTES, 'UTF-8'),
-            'card.verification_code' => htmlspecialchars((string) ($student['student_number'] ?? 'N/A'), ENT_QUOTES, 'UTF-8'),
+            'card.serial_number' => htmlspecialchars($serialNumber, ENT_QUOTES, 'UTF-8'),
+            'card.verification_code' => htmlspecialchars($verificationCode, ENT_QUOTES, 'UTF-8'),
             'theme.primary_color' => htmlspecialchars((string) ($theme['primary_color'] ?? '#0b5ed7'), ENT_QUOTES, 'UTF-8'),
             'theme.secondary_color' => htmlspecialchars((string) ($theme['secondary_color'] ?? '#0a7e8c'), ENT_QUOTES, 'UTF-8'),
             'theme.accent_color' => htmlspecialchars((string) ($theme['accent_color'] ?? '#f4b400'), ENT_QUOTES, 'UTF-8'),
@@ -659,6 +663,79 @@ HTML;
         $mimeType = mime_content_type($resolvedPath) ?: 'image/png';
         $data = base64_encode((string) file_get_contents($resolvedPath));
         return 'data:' . $mimeType . ';base64,' . $data;
+    }
+
+    /**
+     * @param array<string, mixed> $student
+     * @param array<string, mixed> $organization
+     */
+    private function verificationCode(array $student, array $organization): string
+    {
+        $base = trim((string) ($student['student_number'] ?? ''));
+        if ($base === '') {
+            $base = trim((string) ($student['full_name'] ?? 'student'));
+        }
+
+        $org = strtoupper(preg_replace('/[^A-Z0-9]/', '', (string) ($organization['name'] ?? 'NDC')) ?? 'NDC');
+        $org = $org !== '' ? substr($org, 0, 4) : 'NDC';
+        $hash = strtoupper(substr(hash('crc32b', $base . '|' . ($student['full_name'] ?? '') . '|' . ($student['expiry_date'] ?? '')), 0, 8));
+
+        return $org . '-' . preg_replace('/[^A-Za-z0-9]/', '', $base) . '-' . $hash;
+    }
+
+    /**
+     * @param array<string, mixed> $student
+     * @param array<string, mixed> $organization
+     */
+    private function renderQrCodeHtml(string $verificationCode, array $student, array $organization): string
+    {
+        $payload = [
+            'verification_code' => $verificationCode,
+            'student_number' => (string) ($student['student_number'] ?? ''),
+            'student_name' => (string) ($student['full_name'] ?? ''),
+            'organization' => (string) ($organization['name'] ?? 'NDC'),
+            'expiry_date' => (string) ($student['expiry_date'] ?? ''),
+        ];
+
+        $data = json_encode($payload, JSON_UNESCAPED_SLASHES) ?: $verificationCode;
+        $qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=240x240&margin=8&data=' . rawurlencode($data);
+
+        return '<img src="' . htmlspecialchars($qrUrl, ENT_QUOTES, 'UTF-8') . '" alt="QR code" style="width:100%;height:100%;max-width:100%;max-height:100%;object-fit:contain;display:inline-block;">';
+    }
+
+    private function renderBarcodeHtml(string $value): string
+    {
+        $encodedValue = strtoupper(preg_replace('/[^A-Z0-9.-]/', '', $value) ?? '');
+        if ($encodedValue === '') {
+            $encodedValue = 'NDC000000';
+        }
+
+        $hashBits = '';
+        foreach (str_split(hash('sha256', $encodedValue)) as $hex) {
+            $hashBits .= str_pad(base_convert($hex, 16, 2), 4, '0', STR_PAD_LEFT);
+        }
+
+        $bars = [];
+        $x = 8;
+        $width = 220;
+        $height = 62;
+        $barHeight = 42;
+
+        foreach (str_split('1010' . $hashBits . '0101') as $index => $bit) {
+            $barWidth = $bit === '1' ? (($index % 5 === 0) ? 3 : 2) : 1;
+            if ($bit === '1') {
+                $bars[] = '<rect x="' . $x . '" y="4" width="' . $barWidth . '" height="' . $barHeight . '" fill="#111"/>';
+            }
+            $x += $barWidth + 1;
+            if ($x > $width - 8) {
+                break;
+            }
+        }
+
+        $label = htmlspecialchars($encodedValue, ENT_QUOTES, 'UTF-8');
+        $svg = '<svg xmlns="http://www.w3.org/2000/svg" width="' . $width . '" height="' . $height . '" viewBox="0 0 ' . $width . ' ' . $height . '"><rect width="100%" height="100%" fill="#fff"/>' . implode('', $bars) . '<text x="110" y="58" font-family="Arial, Helvetica, sans-serif" font-size="9" fill="#111" text-anchor="middle">' . $label . '</text></svg>';
+
+        return '<img src="data:image/svg+xml;base64,' . base64_encode($svg) . '" alt="Barcode" style="width:100%;height:100%;max-width:220px;max-height:62px;min-width:120px;min-height:34px;object-fit:contain;display:inline-block;">';
     }
 
     private function relativePath(string $absolutePath): string

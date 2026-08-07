@@ -409,6 +409,7 @@ if ($template !== null && is_array($template)) {
                                 <button type="button" class="btn btn-sm btn-outline-secondary tag-button" data-tag="{{student.student_id}}">Student ID</button>
                                 <button type="button" class="btn btn-sm btn-outline-secondary tag-button" data-tag="{{student.photo}}">Photo</button>
                                 <button type="button" class="btn btn-sm btn-outline-secondary tag-button" data-tag="{{student.gender}}">Gender</button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary tag-button" data-tag="{{student.date_of_birth}}">DOB</button>
                                 <button type="button" class="btn btn-sm btn-outline-secondary tag-button" data-tag="{{student.program}}">Program</button>
                                 <button type="button" class="btn btn-sm btn-outline-secondary tag-button" data-tag="{{student.department}}">Department</button>
                                 <button type="button" class="btn btn-sm btn-outline-secondary tag-button" data-tag="{{student.class_level}}">Class</button>
@@ -512,6 +513,7 @@ if ($template !== null && is_array($template)) {
         'student.full_name': <?= json_encode($student['full_name'] ?? 'Student Name', JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>,
         'student.student_id': <?= json_encode($student['student_number'] ?? 'BND001', JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>,
         'student.gender': <?= json_encode($student['gender'] ?? 'Male', JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>,
+        'student.date_of_birth': <?= json_encode($student['date_of_birth'] ?? '1999-01-20', JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>,
         'student.department': <?= json_encode($student['department'] ?? 'ICT', JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>,
         'student.program': <?= json_encode($student['program'] ?? 'Software Development', JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>,
         'student.class_level': <?= json_encode($student['class_level'] ?? 'Level 3', JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>,
