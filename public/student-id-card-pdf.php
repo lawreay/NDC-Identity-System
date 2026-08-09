@@ -82,6 +82,19 @@ function escape(string $value): string
     return htmlspecialchars($value, ENT_QUOTES, 'UTF-8');
 }
 
+function normalizeCardHtmlForPrint(string $html): string
+{
+    return preg_replace_callback('/font-size\s*:\s*([0-9]*\.?[0-9]+)vw/i', static function (array $matches): string {
+        $fontSize = (float) $matches[1] * 13;
+        return 'font-size:' . rtrim(rtrim(number_format($fontSize, 2, '.', ''), '0'), '.') . 'px';
+    }, $html) ?? $html;
+}
+
+if ($message === '') {
+    $frontPreview = normalizeCardHtmlForPrint($frontPreview);
+    $backPreview = normalizeCardHtmlForPrint($backPreview);
+}
+
 $studentName = $student === null
     ? 'Student ID Card'
     : trim((string) ($student['first_name'] ?? '') . ' ' . (string) ($student['last_name'] ?? ''));
