@@ -145,6 +145,14 @@ function escape(string $value): string
                             <?php endforeach; ?>
                         </select>
                         <button type="submit" class="btn btn-primary">Apply</button>
+                        <?php if ($selectedTemplate !== null): ?>
+                            <a
+                                href="student-id-card-pdf.php?id=<?= $id ?>&template=<?= urlencode($templateId) ?>&autoprint=1"
+                                class="btn btn-outline-dark"
+                                target="_blank"
+                                rel="noopener"
+                            >Download A4 PDF</a>
+                        <?php endif; ?>
                     </form>
                 </div>
             </div>
