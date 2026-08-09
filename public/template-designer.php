@@ -2,6 +2,11 @@
 require_once __DIR__ . '/../app/Database.php';
 require_once __DIR__ . '/../app/SettingsRepository.php';
 require_once __DIR__ . '/../app/TemplateDesigner/TemplateDesignerService.php';
+require_once __DIR__ . '/../app/Auth.php';
+
+use App\Auth;
+
+Auth::requireLogin();
 
 $service = new TemplateDesignerService();
 $errors = [];
@@ -176,6 +181,7 @@ if ($template !== null && is_array($template)) {
     </style>
 </head>
 <body>
+<?php require_once __DIR__ . '/partials/header.php'; ?>
 <div class="container py-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>

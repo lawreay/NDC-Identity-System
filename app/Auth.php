@@ -79,15 +79,18 @@ final class Auth
         $user = $statement->fetch(PDO::FETCH_ASSOC);
 
         if (!$user) {
+            self::recordLoginAttempt($email, false, 'user_not_found');
             throw new RuntimeException('Invalid email or password.');
         }
 
         if ((int) ($user['is_active'] ?? 0) !== 1) {
+            self::recordLoginAttempt($email, false, 'account_disabled');
             throw new RuntimeException('This account has been disabled.');
         }
 
         $storedHash = (string) ($user['password_hash'] ?? '');
         if (!self::verifyPassword($password, $storedHash)) {
+            self::recordLoginAttempt($email, false, 'invalid_password');
             throw new RuntimeException('Invalid email or password.');
         }
 
@@ -104,6 +107,8 @@ final class Auth
             'email' => (string) $user['email'],
             'role' => (string) $user['role'],
         ];
+
+        self::recordLoginAttempt($email, true, 'success');
 
         return $_SESSION[self::SESSION_KEY];
     }
@@ -153,11 +158,27 @@ final class Auth
             return false;
         }
 
-        if (password_verify($password, $storedHash)) {
-            return true;
+        return password_verify($password, $storedHash);
+    }
+
+    private static function recordLoginAttempt(string $email, bool $success, string $reason = ''): void
+    {
+        $logDir = __DIR__ . '/../storage/logs';
+        if (!is_dir($logDir)) {
+            @mkdir($logDir, 0777, true);
         }
 
-        return hash_equals($storedHash, $password);
+        $entry = [
+            'ts' => date('c'),
+            'ip' => $_SERVER['REMOTE_ADDR'] ?? null,
+            'ua' => $_SERVER['HTTP_USER_AGENT'] ?? null,
+            'email' => $email,
+            'success' => $success ? 1 : 0,
+            'reason' => $reason,
+        ];
+
+        $file = $logDir . '/login_attempts.log';
+        @file_put_contents($file, json_encode($entry, JSON_UNESCAPED_SLASHES) . PHP_EOL, FILE_APPEND | LOCK_EX);
     }
 
     private static function shouldRehash(string $storedHash): bool

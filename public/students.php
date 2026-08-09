@@ -1,6 +1,11 @@
 <?php
 require_once __DIR__ . '/../app/Database.php';
 require_once __DIR__ . '/../app/StudentRepository.php';
+require_once __DIR__ . '/../app/Auth.php';
+
+use App\Auth;
+
+Auth::requireLogin();
 
 $search = trim($_GET['search'] ?? '');
 
