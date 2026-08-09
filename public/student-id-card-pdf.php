@@ -82,19 +82,6 @@ function escape(string $value): string
     return htmlspecialchars($value, ENT_QUOTES, 'UTF-8');
 }
 
-function normalizeCardHtmlForPrint(string $html): string
-{
-    return preg_replace_callback('/font-size\s*:\s*([0-9]*\.?[0-9]+)vw/i', static function (array $matches): string {
-        $fontSize = (float) $matches[1] * 13;
-        return 'font-size:' . rtrim(rtrim(number_format($fontSize, 2, '.', ''), '0'), '.') . 'px';
-    }, $html) ?? $html;
-}
-
-if ($message === '') {
-    $frontPreview = normalizeCardHtmlForPrint($frontPreview);
-    $backPreview = normalizeCardHtmlForPrint($backPreview);
-}
-
 $studentName = $student === null
     ? 'Student ID Card'
     : trim((string) ($student['first_name'] ?? '') . ' ' . (string) ($student['last_name'] ?? ''));
@@ -173,27 +160,26 @@ $studentName = $student === null
         }
 
         .print-card-shell {
-            width: 85.6mm;
-            height: 54mm;
+            width: min(856px, 100%);
+            aspect-ratio: 856 / 540;
+            height: auto;
             position: relative;
             overflow: hidden;
-            border-radius: 2mm;
+            border-radius: 10px;
             background: #fff;
             box-shadow: 0 0 0 0.35mm rgba(255, 255, 255, 0.85), 0 9mm 18mm rgba(0, 0, 0, 0.35);
         }
 
         .print-card-shell .ndc-id-card-wrapper {
-            width: 856px !important;
+            width: 100% !important;
             max-width: none !important;
-            height: 540px !important;
+            height: 100% !important;
             aspect-ratio: auto !important;
             border-radius: 10px !important;
-            transform: scale(0.377);
-            transform-origin: top left;
         }
 
         .side-label {
-            width: 85.6mm;
+            width: min(856px, 100%);
             margin-bottom: 3mm;
             color: #fff;
             font-size: 9px;
@@ -243,7 +229,17 @@ $studentName = $student === null
             }
 
             .print-card-shell {
+                width: 85.6mm;
+                height: 54mm;
+                border-radius: 2mm;
                 box-shadow: 0 0 0 0.35mm rgba(255, 255, 255, 0.9);
+            }
+
+            .print-card-shell .ndc-id-card-wrapper {
+                width: 856px !important;
+                height: 540px !important;
+                transform: scale(0.377);
+                transform-origin: top left;
             }
         }
     </style>

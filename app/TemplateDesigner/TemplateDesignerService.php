@@ -348,6 +348,8 @@ final class TemplateDesignerService
             $payload = str_replace('{{' . $tag . '}}', $value, $payload);
         }
 
+        $payload = $this->normalizeViewportFontSizes($payload);
+
         return $this->wrapCardHtml($payload);
     }
 
@@ -356,6 +358,14 @@ final class TemplateDesignerService
         $width = self::CARD_WIDTH;
         $height = self::CARD_HEIGHT;
         return '<div class="ndc-id-card-wrapper" style="width:100%;max-width:' . $width . 'px;aspect-ratio:' . $width . '/' . $height . ';height:auto;box-sizing:border-box;overflow:hidden;position:relative;background:#fff;border:1px solid #d1d5db;border-radius:10px;">' . $html . '</div>';
+    }
+
+    private function normalizeViewportFontSizes(string $html): string
+    {
+        return preg_replace_callback('/font-size\s*:\s*([0-9]*\.?[0-9]+)vw/i', static function (array $matches): string {
+            $fontSize = (float) $matches[1] * 13;
+            return 'font-size:' . rtrim(rtrim(number_format($fontSize, 2, '.', ''), '0'), '.') . 'px';
+        }, $html) ?? $html;
     }
 
     /**
