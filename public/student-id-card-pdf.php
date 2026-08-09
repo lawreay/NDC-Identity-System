@@ -93,7 +93,7 @@ $studentName = $student === null
     <title><?= escape($studentName !== '' ? $studentName : 'Student ID Card') ?> - A4 PDF</title>
     <style>
         @page {
-            size: A4 portrait;
+            size: 85.6mm 54mm;
             margin: 0;
         }
 
