@@ -236,10 +236,11 @@ $studentName = $student === null
             }
 
             .print-card-shell .ndc-id-card-wrapper {
-                width: 856px !important;
-                height: 540px !important;
-                transform: scale(0.377);
-                transform-origin: top left;
+                width: 100% !important;
+                height: 100% !important;
+                aspect-ratio: auto !important;
+                transform: none !important;
+                transform-origin: unset !important;
             }
         }
     </style>
