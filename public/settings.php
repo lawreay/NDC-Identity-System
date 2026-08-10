@@ -106,15 +106,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
-    try {
-        if ($repository->save($input)) {
-            $success = 'Settings saved successfully.';
-            $settings = array_merge($settings, $input);
-        } else {
-            $errors[] = 'Unable to save settings.';
+    if (!$passwordChangeRequested || $errors === []) {
+        try {
+            if ($repository->save($input)) {
+                $success = 'Settings saved successfully.';
+                if ($passwordUpdated) {
+                    $success = 'Password changed and settings saved successfully.';
+                }
+                $settings = array_merge($settings, $input);
+            } else {
+                $errors[] = 'Unable to save settings.';
+            }
+        } catch (Throwable $exception) {
+            $errors[] = 'Unable to save settings: ' . $exception->getMessage();
         }
-    } catch (Throwable $exception) {
-        $errors[] = 'Unable to save settings: ' . $exception->getMessage();
     }
 }
 
