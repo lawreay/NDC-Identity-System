@@ -93,7 +93,6 @@ $studentName = $student === null
     <title><?= escape($studentName !== '' ? $studentName : 'Student ID Card') ?> - A4 PDF</title>
     <style>
         @page {
-            size: 85.6mm 54mm;
             margin: 0;
         }
 
@@ -146,17 +145,12 @@ $studentName = $student === null
         }
 
         .a4-sheet {
-            width: 210mm;
-            min-height: 297mm;
+            width: min(960px, 100%);
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: center;
-            gap: 18mm;
-            background: #000;
-            box-shadow: 0 24px 80px rgba(0, 0, 0, 0.35);
-            print-color-adjust: exact;
-            -webkit-print-color-adjust: exact;
+            gap: 18px;
+            background: transparent;
         }
 
         .print-card-shell {
@@ -175,12 +169,13 @@ $studentName = $student === null
             max-width: none !important;
             height: 100% !important;
             aspect-ratio: auto !important;
-            border-radius: 10px !important;
+            transform: none !important;
+            transform-origin: unset !important;
         }
 
         .side-label {
             width: min(856px, 100%);
-            margin-bottom: 3mm;
+            margin-bottom: 8px;
             color: #fff;
             font-size: 9px;
             font-weight: 700;
@@ -190,12 +185,11 @@ $studentName = $student === null
         }
 
         .error {
-            width: 210mm;
-            min-height: 297mm;
+            width: min(960px, 100%);
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 24mm;
+            padding: 24px;
             background: #000;
             color: #fff;
             font-size: 16px;
@@ -205,9 +199,7 @@ $studentName = $student === null
         @media print {
             html,
             body {
-                width: 210mm;
-                height: 297mm;
-                background: #000;
+                background: #fff;
             }
 
             .screen-toolbar {
@@ -215,32 +207,16 @@ $studentName = $student === null
             }
 
             .sheet-wrap {
-                display: block;
                 padding: 0;
+                gap: 18px;
             }
 
-            .a4-sheet,
-            .error {
-                width: 210mm;
-                height: 297mm;
-                min-height: 297mm;
-                box-shadow: none;
-                page-break-after: avoid;
+            .a4-sheet {
+                width: 100%;
             }
 
             .print-card-shell {
-                width: 85.6mm;
-                height: 54mm;
-                border-radius: 2mm;
-                box-shadow: 0 0 0 0.35mm rgba(255, 255, 255, 0.9);
-            }
-
-            .print-card-shell .ndc-id-card-wrapper {
-                width: 100% !important;
-                height: 100% !important;
-                aspect-ratio: auto !important;
-                transform: none !important;
-                transform-origin: unset !important;
+                box-shadow: none;
             }
         }
     </style>
