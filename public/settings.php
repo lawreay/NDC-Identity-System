@@ -208,10 +208,6 @@ $signaturePreview = getPreviewSrc($settings['principal_signature_path'] ?? $sett
                 <label class="form-label">Confirm New Password</label>
                 <input type="password" name="confirm_password" class="form-control" autocomplete="new-password">
             </div>
-            <div class="col-md-4">
-                <label class="form-label">Confirm New Password</label>
-                <input type="password" name="confirm_password" class="form-control" autocomplete="new-password">
-            </div>
             <div class="col-md-6">
                 <label class="form-label">School Name</label>
                 <input type="text" name="school_name" class="form-control" value="<?= escape($settings['school_name'] ?? $settings['organization_name'] ?? '') ?>">
