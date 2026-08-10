@@ -19,6 +19,8 @@ try {
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    Auth::requireCsrf();
+
     $input = [
         'organization_name' => trim((string) ($_POST['organization_name'] ?? '')),
         'organization_address' => trim((string) ($_POST['organization_address'] ?? '')),
@@ -32,6 +34,56 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'school_name' => trim((string) ($_POST['school_name'] ?? '')),
         'academic_programs' => trim((string) ($_POST['academic_programs'] ?? '')),
     ];
+
+    $currentPassword = trim((string) ($_POST['current_password'] ?? ''));
+    $newPassword = trim((string) ($_POST['new_password'] ?? ''));
+    $confirmPassword = trim((string) ($_POST['confirm_password'] ?? ''));
+    $passwordChangeRequested = $newPassword !== '' || $confirmPassword !== '';
+    $passwordUpdated = false;
+
+    if ($passwordChangeRequested) {
+        if ($currentPassword === '') {
+            $errors[] = 'Current password is required to change your password.';
+        }
+
+        if ($newPassword === '') {
+            $errors[] = 'New password is required.';
+        }
+
+        if ($confirmPassword === '') {
+            $errors[] = 'Please confirm your new password.';
+        }
+
+        if ($newPassword !== '' && $confirmPassword !== '' && $newPassword !== $confirmPassword) {
+            $errors[] = 'New password and confirmation do not match.';
+        }
+
+        if ($newPassword !== '' && strlen($newPassword) < 8) {
+            $errors[] = 'New password must be at least 8 characters long.';
+        }
+
+        if ($errors === []) {
+            $user = Auth::user();
+            $pdo = Database::getConnection();
+            $statement = $pdo->prepare('SELECT password_hash FROM users WHERE id = :id LIMIT 1');
+            $statement->execute([':id' => (int) ($user['id'] ?? 0)]);
+            $storedUser = $statement->fetch(PDO::FETCH_ASSOC);
+
+            if (!$storedUser || !Auth::verifyPassword($currentPassword, (string) ($storedUser['password_hash'] ?? ''))) {
+                $errors[] = 'Current password is invalid.';
+            } else {
+                $updateStatement = $pdo->prepare('UPDATE users SET password_hash = :hash WHERE id = :id');
+                $passwordUpdated = $updateStatement->execute([
+                    ':hash' => Auth::hashPassword($newPassword),
+                    ':id' => (int) ($user['id'] ?? 0),
+                ]);
+
+                if (!$passwordUpdated) {
+                    $errors[] = 'Unable to update password. Please try again.';
+                }
+            }
+        }
+    }
 
     $uploadRoot = __DIR__ . '/uploads/settings';
     if (!is_dir($uploadRoot)) {
@@ -150,7 +202,24 @@ $signaturePreview = getPreviewSrc($settings['principal_signature_path'] ?? $sett
     <?php endif; ?>
 
     <form method="post" enctype="multipart/form-data">
+        <input type="hidden" name="_csrf" value="<?= escape(Auth::csrfToken()) ?>">
         <div class="row g-3">
+            <div class="col-12">
+                <h2 class="h5">Change Password</h2>
+                <p class="text-muted mb-3">Leave password fields blank if you do not want to change your password.</p>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Current Password</label>
+                <input type="password" name="current_password" class="form-control" autocomplete="current-password">
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">New Password</label>
+                <input type="password" name="new_password" class="form-control" autocomplete="new-password">
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Confirm New Password</label>
+                <input type="password" name="confirm_password" class="form-control" autocomplete="new-password">
+            </div>
             <div class="col-md-6">
                 <label class="form-label">School Name</label>
                 <input type="text" name="school_name" class="form-control" value="<?= escape($settings['school_name'] ?? $settings['organization_name'] ?? '') ?>">
