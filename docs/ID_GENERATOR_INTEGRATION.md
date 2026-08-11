@@ -9,10 +9,9 @@ The current system already provides:
 - a `student_id_cards` table that stores generated ID card metadata
 - a student ID number generation service
 - QR code generation for student ID cards
-- PDF rendering for ID cards using Dompdf
 - student photo upload and storage
 - organization logo and principal signature settings
-- routes for generating, previewing, downloading, and verifying ID cards
+- routes for generating, previewing, and verifying ID cards
 
 This document describes the existing internals required to build a separate Student ID Generator application that can integrate with the current system.
 
@@ -126,7 +125,6 @@ The existing student ID generation algorithm is implemented in `app/Services/Stu
 - File name format is `student_{student_number}.png`.
 
 ### Displayed
-- When rendering the PDF card in `cardHtml()`, the QR code is loaded via `data_uri()` from the stored path.
 - The student ID preview uses the same stored `qr_code_path` in the `student_id_cards` record.
 
 ### Verification URL
@@ -138,7 +136,6 @@ The existing student ID generation algorithm is implemented in `app/Services/Stu
 ### Libraries Used
 - No dedicated QR library in the project.
 - QR generation is handled via remote QRServer API.
-- Existing PDF QR display uses standard HTML `<img src="...">` with a stored PNG or data URI.
 
 ---
 
@@ -166,21 +163,10 @@ The existing student ID generation algorithm is implemented in `app/Services/Stu
 
 ---
 
-## 7. Existing PDF Generation
-
-### Library
-- `dompdf/dompdf` is used for PDF rendering.
-- Version requirement from `composer.json`: `^3.1`.
-
-### Service / Flow
-- ID card PDF generation for the student ID card uses `StudentIdController::download()`.
-- The controller constructs `Dompdf` with `Options` and `isRemoteEnabled` set to true.
-- It loads HTML from `cardHtml()` and renders the PDF.
-- The PDF is streamed for download with a generated filename.
+## 7. Existing HTML Rendering
 
 ### Templates
 - Student ID card HTML is generated directly in `StudentIdController::cardHtml()`.
-- `StudentController::studentCardHtml()` also generates another student card PDF style for student cards with QR content.
 - The card markup and inline CSS are entirely generated in PHP string templates.
 
 ---
@@ -210,7 +196,6 @@ The existing student ID generation algorithm is implemented in `app/Services/Stu
 | `Student` model | Manages student records, photo path updates, and student ID uniqueness checks.
 | `StudentIdCard` model | Reads and upserts card metadata, including issue/expiry dates and QR code path.
 | `Setting` model | Generic settings access and upsert for ID card and branding values.
-| `Dompdf\Dompdf` | PDF rendering library used for card PDF output.
 
 Potential reuse or integration points:
 - Student identity and metadata retrieval from `students`
@@ -228,7 +213,6 @@ Relevant student and ID routes are defined in `public/index.php`.
 - `student_ids.index` - list/manage Student ID cards
 - `student_ids.create` - show generate/update ID card form
 - `student_ids.preview` - preview a generated ID card
-- `student_ids.download` - download ID card PDF
 - `student_ids.verify` - internal verify route to require auth? (same as public verify if GET)
 - `verify.student_id` - public verification endpoint by student number
 
@@ -291,19 +275,12 @@ Settings relevant to ID generation and display include:
 - QR codes stored as `uploads/student_id_qr/student_{student_number}.png`
 - Signatures stored with `signature-{timestamp}-{random}.{ext}`
 
-### Generated PDF
-- PDFs are generated on demand via Dompdf and streamed; no permanent storage path is used by current code.
-
-### Temporary files
-- No explicit temporary file storage is used for PDF generation other than Dompdf internals.
-
 ---
 
 ## 14. Dependencies
 
 Composer packages that can be reused by the new ID Generator project:
 
-- `dompdf/dompdf` - PDF rendering
 - `phpoffice/phpspreadsheet` - spreadsheet import/export (not directly required for ID generator but available)
 
 Other relevant built-in or app utilities:
@@ -375,7 +352,6 @@ Potential synchronization problems:
 - [x] QR verification endpoint (`verify.student_id`)
 - [x] Organization settings (`settings` table)
 - [x] Student ID generation algorithm (`StudentIdService`)
-- [x] PDF rendering library (`dompdf/dompdf`)
 - [x] ID card display settings (`student_id_card_*` keys)
 - [x] Student ID card issue/expiry support
 - [x] Signature storage (`public/uploads/signatures`)

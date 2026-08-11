@@ -30,7 +30,7 @@ Bring the Template Designer into the student ID lifecycle by integrating templat
 ## Version 4 Goals
 
 1. Integrate templates into the student ID generation workflow.
-2. Add real student preview and PDF/print output.
+2. Add real student preview output.
 3. Add template engine flexibility and safeguard missing data.
 4. Build template versioning and metadata.
 5. Improve administration UI for selecting and applying templates.
