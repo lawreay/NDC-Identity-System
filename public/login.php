@@ -9,6 +9,25 @@ Auth::boot();
 $errors = [];
 $next = trim((string) ($_GET['next'] ?? 'students.php'));
 
+// Validate redirect target to prevent open redirect attacks
+function isValidRedirectTarget(string $target): bool
+{
+    if ($target === '') {
+        return true;
+    }
+    
+    // Allow only relative URLs that start with / or are simple filenames
+    // Prevent protocol-based redirects (http://, https://, //, etc.)
+    if (preg_match('/^\//', $target) || preg_match('/^[a-zA-Z0-9._-]+\.php(\?.*)?$/', $target)) {
+        return !preg_match('/[\/\\\\:]/', $target) || preg_match('/^\/[^\/]/', $target);
+    }
+    
+    return false;
+}
+
+// Sanitize redirect target
+$next = isValidRedirectTarget($next) ? $next : 'students.php';
+
 if (Auth::isAuthenticated()) {
     $target = $next !== '' ? $next : 'students.php';
     header('Location: ' . $target);
@@ -20,7 +39,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         Auth::requireCsrf();
         Auth::login((string) ($_POST['email'] ?? ''), (string) ($_POST['password'] ?? ''));
         $target = trim((string) ($_POST['next'] ?? ''));
-        $target = $target !== '' ? $target : $next;
+        $target = isValidRedirectTarget($target) ? $target : $next;
         header('Location: ' . ($target !== '' ? $target : 'students.php'));
         exit;
     } catch (Throwable $exception) {

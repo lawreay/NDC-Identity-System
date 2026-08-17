@@ -24,6 +24,15 @@ final class Auth
             ]);
             session_start();
         }
+        
+        // Add security headers to prevent common attacks
+        if (!headers_sent()) {
+            header('X-Content-Type-Options: nosniff', true);
+            header('X-Frame-Options: DENY', true);
+            header('X-XSS-Protection: 1; mode=block', true);
+            header('Referrer-Policy: strict-origin-when-cross-origin', true);
+            header('Permissions-Policy: geolocation=(), microphone=(), camera=(), payment=()', true);
+        }
     }
 
     public static function isAuthenticated(): bool

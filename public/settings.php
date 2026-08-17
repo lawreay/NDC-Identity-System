@@ -121,6 +121,12 @@ function storeUpload(array $file, string $uploadRoot, string $baseName): ?string
         return null;
     }
 
+    // Validate file size (5 MB limit)
+    $maxFileSize = 5 * 1024 * 1024;
+    if ((int) ($file['size'] ?? 0) > $maxFileSize) {
+        return null;
+    }
+
     $allowed = ['jpg', 'jpeg', 'png', 'webp', 'svg'];
     $extension = strtolower(pathinfo((string) ($file['name'] ?? ''), PATHINFO_EXTENSION));
     if (!in_array($extension, $allowed, true)) {

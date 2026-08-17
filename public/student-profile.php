@@ -21,17 +21,32 @@ try {
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $id > 0) {
+    try {
+        Auth::requireCsrf();
+    } catch (Throwable $csrfException) {
+        $uploadMessage = 'Security token invalid. Please try again.';
+        $uploadType = 'danger';
+        $csrfException = null; // Use variable to avoid unused warning
+    }
+    
     $file = $_FILES['photo'] ?? [];
-    $hasSelectedFile = is_array($file) && !empty($file['name']) && (($file['size'] ?? 0) > 0);
+    $hasSelectedFile = is_array($file) && !empty($file['name']) && (($file['size'] ?? 0) > 0) && $uploadMessage === '';
 
     if ($hasSelectedFile) {
         $allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'];
         $extension = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
         $allowedExtensions = ['png', 'jpg', 'jpeg', 'webp'];
         $mimeType = strtolower($file['type'] ?? '');
-        $isAccepted = in_array($mimeType, $allowedTypes, true) || in_array($extension, $allowedExtensions, true);
+        $isAccepted = in_array($mimeType, $allowedTypes, true) && in_array($extension, $allowedExtensions, true);
+        
+        // Check file size (5 MB limit)
+        $maxFileSize = 5 * 1024 * 1024;
+        $fileTooLarge = (int) ($file['size'] ?? 0) > $maxFileSize;
 
-        if (!$isAccepted) {
+        if ($fileTooLarge) {
+            $uploadMessage = 'File size must not exceed 5 MB.';
+            $uploadType = 'danger';
+        } elseif (!$isAccepted) {
             $uploadMessage = 'Only PNG, JPG, JPEG, and WebP images are allowed.';
             $uploadType = 'danger';
         } elseif (($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
@@ -115,6 +130,7 @@ $fullName = trim(((string) ($student['first_name'] ?? '')) . ' ' . ((string) ($s
 
                             <form method="post" enctype="multipart/form-data" class="mt-3">
                                 <input type="hidden" name="id" value="<?= (int) ($student['id'] ?? 0) ?>">
+                                <input type="hidden" name="_csrf" value="<?= htmlspecialchars(Auth::csrfToken(), ENT_QUOTES, 'UTF-8') ?>">
                                 <label class="form-label">Upload photo</label>
                                 <input type="file" name="photo" accept="image/*" class="form-control">
                                 <button type="submit" class="btn btn-primary mt-2">Save photo</button>
