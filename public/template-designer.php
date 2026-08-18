@@ -19,8 +19,14 @@ $defaultTemplateId = $service->getDefaultTemplateId();
 if (isset($_GET['export']) && is_string($_GET['export']) && $_GET['export'] !== '') {
     $exportPath = $service->exportTemplate($_GET['export']);
     if ($exportPath !== null && is_file($exportPath)) {
+        // Safely create filename without path traversal or header injection
+        $safeFilename = preg_replace('/[^a-zA-Z0-9._-]/', '_', basename($exportPath));
+        if ($safeFilename === '') {
+            $safeFilename = 'template_export.ndctemplate';
+        }
+        
         header('Content-Type: application/zip');
-        header('Content-Disposition: attachment; filename="' . basename($exportPath) . '"');
+        header('Content-Disposition: attachment; filename="' . $safeFilename . '"');
         header('Content-Length: ' . filesize($exportPath));
         readfile($exportPath);
         unlink($exportPath);
