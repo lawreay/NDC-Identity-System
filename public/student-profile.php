@@ -103,7 +103,25 @@ $fullName = trim(((string) ($student['first_name'] ?? '')) . ' ' . ((string) ($s
 </head>
 <body class="bg-light">
     <div class="container py-4">
-        <a href="students.php" class="btn btn-outline-secondary btn-sm mb-4">← Back to students</a>
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <a href="students.php" class="btn btn-outline-secondary btn-sm">← Back to students</a>
+            
+            <?php if ($student && $student !== null): ?>
+                <div class="btn-group" role="group">
+                    <a href="student-id-card.php?id=<?= (int) ($student['id'] ?? 0) ?>" class="btn btn-outline-primary btn-sm">
+                        👁️ Preview Card
+                    </a>
+                    
+                    <form method="post" action="export-card.php" style="display:inline;">
+                        <input type="hidden" name="student_id" value="<?= (int) ($student['id'] ?? 0) ?>">
+                        <input type="hidden" name="_csrf" value="<?= htmlspecialchars(Auth::csrfToken(), ENT_QUOTES, 'UTF-8') ?>">
+                        <button type="submit" class="btn btn-primary btn-sm" title="Export student ID card as PDF">
+                            📥 Export PDF
+                        </button>
+                    </form>
+                </div>
+            <?php endif; ?>
+        </div>
 
         <?php if ($errorMessage): ?>
             <div class="alert alert-danger"><?= htmlspecialchars($errorMessage, ENT_QUOTES, 'UTF-8') ?></div>
