@@ -27,6 +27,8 @@ final class CardExportService
             );
         }
 
+        ini_set('pcre.backtrack_limit', '10000000');
+
         // Standard ID card size: 85.6mm x 53.98mm (3.37" x 2.125")
         // Landscape orientation for better presentation
         $mpdf = new Mpdf([
@@ -37,7 +39,6 @@ final class CardExportService
             'margin_bottom' => 0,
             'margin_header' => 0,
             'margin_footer' => 0,
-            'orientation' => 'L',
             'mode' => 'utf-8',
             'tempDir' => sys_get_temp_dir(),
         ]);
@@ -49,13 +50,13 @@ final class CardExportService
         $mpdf->SetKeywords('student, id, card, identity');
 
         // Add front side
-        $mpdf->WriteHTML($this->wrapCardHtml($htmlFront));
+        $this->writeHtmlInChunks($mpdf, $this->wrapCardHtml($htmlFront));
 
         // Add page break for back side
         $mpdf->AddPage();
 
         // Add back side
-        $mpdf->WriteHTML($this->wrapCardHtml($htmlBack));
+        $this->writeHtmlInChunks($mpdf, $this->wrapCardHtml($htmlBack));
 
         // Generate output filename
         $sanitizedNumber = preg_replace('/[^a-zA-Z0-9_-]/', '_', $studentNumber);
@@ -138,6 +139,24 @@ final class CardExportService
 HTML;
     }
 
+    private function writeHtmlInChunks(Mpdf $mpdf, string $html): void
+    {
+        $parts = explode('>', $html);
+        $chunk = '';
+
+        foreach ($parts as $part) {
+            $chunk .= $part . '>';
+            if (strlen($chunk) >= 200000) {
+                $mpdf->WriteHTML($chunk);
+                $chunk = '';
+            }
+        }
+
+        if ($chunk !== '') {
+            $mpdf->WriteHTML($chunk);
+        }
+    }
+
     /**
      * Export a single side card as PDF (front only or back only)
      *
@@ -157,6 +176,8 @@ HTML;
             );
         }
 
+        ini_set('pcre.backtrack_limit', '10000000');
+
         $mpdf = new Mpdf([
             'format' => [85.6, 53.98],
             'margin_left' => 0,
@@ -165,12 +186,11 @@ HTML;
             'margin_bottom' => 0,
             'margin_header' => 0,
             'margin_footer' => 0,
-            'orientation' => 'L',
             'mode' => 'utf-8',
             'tempDir' => sys_get_temp_dir(),
         ]);
 
-        $mpdf->WriteHTML($this->wrapCardHtml($html));
+        $this->writeHtmlInChunks($mpdf, $this->wrapCardHtml($html));
 
         $sanitizedNumber = preg_replace('/[^a-zA-Z0-9_-]/', '_', $studentNumber);
         $filename = 'card_' . ($sanitizedNumber ?: 'export') . '_' . $side . '_' . time() . '.pdf';

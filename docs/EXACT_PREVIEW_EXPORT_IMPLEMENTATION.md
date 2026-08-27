@@ -7,6 +7,8 @@ The preview and PDF export now use the same selected template:
 - `public/student-id-card.php` sends `student_id` and `template_id` to the export endpoint.
 - `public/export-card.php` loads that template instead of always loading the default template.
 - The generated PDF keeps the card dimensions at 85.6 x 53.98 mm, with front and back on separate pages.
+- The exporter scales the 856 x 540 preview canvas to the physical page and avoids mPDF's conflicting orientation override.
+- Large rendered HTML is written in chunks and the PCRE limit is raised for embedded images, preventing mPDF's generic export failure.
 
 This prevents exporting a different template from the one visible in the preview.
 
