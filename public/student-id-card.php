@@ -170,7 +170,16 @@ function escape(string $value): string
                 <div class="col-lg-6">
                     <div class="card shadow-sm">
                         <div class="card-body">
-                            <h2 class="h6 mb-3">Front</h2>
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h2 class="h6 mb-0">Front</h2>
+                                <form method="post" action="export-card-png.php">
+                                    <input type="hidden" name="student_id" value="<?= $id ?>">
+                                    <input type="hidden" name="template_id" value="<?= escape($templateId) ?>">
+                                    <input type="hidden" name="side" value="front">
+                                    <input type="hidden" name="_csrf" value="<?= escape(Auth::csrfToken()) ?>">
+                                    <button type="submit" class="btn btn-outline-primary btn-sm">Export PNG</button>
+                                </form>
+                            </div>
                             <div class="preview-frame"><?= $frontPreview ?></div>
                         </div>
                     </div>
@@ -178,7 +187,16 @@ function escape(string $value): string
                 <div class="col-lg-6">
                     <div class="card shadow-sm">
                         <div class="card-body">
-                            <h2 class="h6 mb-3">Back</h2>
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h2 class="h6 mb-0">Back</h2>
+                                <form method="post" action="export-card-png.php">
+                                    <input type="hidden" name="student_id" value="<?= $id ?>">
+                                    <input type="hidden" name="template_id" value="<?= escape($templateId) ?>">
+                                    <input type="hidden" name="side" value="back">
+                                    <input type="hidden" name="_csrf" value="<?= escape(Auth::csrfToken()) ?>">
+                                    <button type="submit" class="btn btn-outline-primary btn-sm">Export PNG</button>
+                                </form>
+                            </div>
                             <div class="preview-frame"><?= $backPreview ?></div>
                         </div>
                     </div>

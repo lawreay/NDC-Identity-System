@@ -7,6 +7,53 @@ use RuntimeException;
 
 final class CardExportService
 {
+    private const CARD_WIDTH = 856;
+    private const CARD_HEIGHT = 540;
+    private const PNG_SCALE = 2;
+
+    public function exportCardPng(string $html, string $studentNumber, string $side): string
+    {
+        if (!in_array($side, ['front', 'back'], true)) {
+            throw new RuntimeException('Invalid card side.');
+        }
+
+        $chromePath = $this->findChromePath();
+        if ($chromePath === null) {
+            throw new RuntimeException('Chrome or Edge is required for PNG export.');
+        }
+
+        $token = bin2hex(random_bytes(8));
+        $htmlPath = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'card_' . $token . '.html';
+        $imagePath = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'card_' . $token . '_' . $side . '.png';
+        $profilePath = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'chrome_card_' . $token;
+
+        $document = '<!DOCTYPE html><html><head><meta charset="utf-8"><style>'
+            . '*{box-sizing:border-box}'
+            . 'html,body{margin:0;padding:0;width:' . self::CARD_WIDTH . 'px;height:' . self::CARD_HEIGHT . 'px;overflow:hidden}'
+            . '.card{width:' . self::CARD_WIDTH . 'px;height:' . self::CARD_HEIGHT . 'px;overflow:hidden}'
+            . '.ndc-id-card-wrapper{width:' . self::CARD_WIDTH . 'px !important;height:' . self::CARD_HEIGHT . 'px !important;max-width:none !important;aspect-ratio:auto !important}'
+            . '</style></head><body><div class="card">' . $html . '</div></body></html>';
+
+        if (file_put_contents($htmlPath, $document) === false) {
+            throw new RuntimeException('Could not create the temporary PNG export document.');
+        }
+
+        try {
+            $this->captureChromeImage($chromePath, $htmlPath, $imagePath, $profilePath);
+            $sanitizedNumber = preg_replace('/[^a-zA-Z0-9_-]/', '_', $studentNumber);
+            $filename = 'card_' . ($sanitizedNumber ?: 'export') . '_' . $side . '.png';
+            $downloadPath = sys_get_temp_dir() . DIRECTORY_SEPARATOR . $filename;
+            if (!copy($imagePath, $downloadPath)) {
+                throw new RuntimeException('Could not prepare the PNG download.');
+            }
+            return $downloadPath;
+        } finally {
+            $this->removeTemporaryPath($htmlPath);
+            $this->removeTemporaryPath($imagePath);
+            $this->removeTemporaryPath($profilePath);
+        }
+    }
+
     /**
      * Export a student card as PDF with both front and back
      * 
@@ -174,7 +221,7 @@ final class CardExportService
     {
         $command = escapeshellarg($chromePath)
             . ' --headless=new --disable-gpu --no-sandbox --allow-file-access-from-files'
-            . ' --hide-scrollbars --force-device-scale-factor=2 --window-size=856,540 --screenshot=' . escapeshellarg($imagePath)
+            . ' --hide-scrollbars --force-device-scale-factor=' . self::PNG_SCALE . ' --window-size=' . self::CARD_WIDTH . ',' . self::CARD_HEIGHT . ' --screenshot=' . escapeshellarg($imagePath)
             . ' --user-data-dir=' . escapeshellarg($profilePath)
             . ' ' . escapeshellarg($htmlPath);
 

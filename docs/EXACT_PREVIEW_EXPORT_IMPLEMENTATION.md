@@ -43,3 +43,16 @@ composer install
 ```
 
 On Windows, Chrome is detected at `C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe` and Edge is used as a fallback when Chrome is unavailable. mPDF remains the fallback renderer only when no browser renderer is available.
+
+## PNG preview export
+
+PNG export is separate from PDF export and does not use mPDF or PDF as an intermediate format.
+
+- Endpoint: `public/export-card-png.php`
+- Service method: `CardExportService::exportCardPng()`
+- Controls: Front and Back `Export PNG` buttons on `public/student-id-card.php`
+- Inputs: authenticated `student_id`, selected `template_id`, validated `side`, and CSRF token
+- Output: `card_STUDENTNUMBER_front.png` or `card_STUDENTNUMBER_back.png`
+- Target size: 1712 x 1080 pixels, representing an 856 x 540 CSS-pixel card at 2x device scale
+
+The endpoint renders only the selected card side and uses the same template, student data, organization settings, and theme as Card Review. It rejects invalid sides, requires login and CSRF, sanitizes the filename, and removes temporary files after capture.
