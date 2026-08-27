@@ -116,7 +116,17 @@ function escape(string $value): string
             <h1 class="h3 mb-1">Student ID Card Preview</h1>
             <p class="text-muted mb-0">Preview the generated card using the selected template.</p>
         </div>
-        <a href="student-profile.php?id=<?= $id ?>" class="btn btn-outline-secondary">Back to profile</a>
+        <div class="d-flex gap-2">
+            <?php if ($selectedTemplate !== null): ?>
+                <form method="post" action="export-card.php">
+                    <input type="hidden" name="student_id" value="<?= $id ?>">
+                    <input type="hidden" name="template_id" value="<?= escape($templateId) ?>">
+                    <input type="hidden" name="_csrf" value="<?= escape(Auth::csrfToken()) ?>">
+                    <button type="submit" class="btn btn-primary">Export Preview PDF</button>
+                </form>
+            <?php endif; ?>
+            <a href="student-profile.php?id=<?= $id ?>" class="btn btn-outline-secondary">Back to profile</a>
+        </div>
     </div>
 
     <?php if ($message !== ''): ?>

@@ -42,11 +42,12 @@ try {
     $service = new TemplateDesignerService();
     $settingsRepository = new SettingsRepository(Database::getConnection());
 
-    // Get default template
-    $template = $service->getDefaultTemplate();
+    // Export the template currently shown in the preview when provided.
+    $templateId = trim((string) ($_POST['template_id'] ?? ''));
+    $template = $templateId !== '' ? $service->getTemplate($templateId) : $service->getDefaultTemplate();
     if (!$template) {
         http_response_code(500);
-        exit('No default template configured. Please set a default template in the Template Designer.');
+        exit($templateId !== '' ? 'The selected template could not be loaded.' : 'No default template configured. Please set a default template in the Template Designer.');
     }
 
     // Prepare student data
