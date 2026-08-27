@@ -107,15 +107,18 @@ final class CardExportService
             font-family: Arial, sans-serif;
         }
         .card-container {
-            width: 100%;
-            height: 100%;
+            width: 323px;
+            height: 204px;
             overflow: hidden;
+            position: relative;
         }
         .ndc-id-card-wrapper {
-            width: 100% !important;
-            height: 100% !important;
-            max-width: none !important;
+            width: 856px !important;
+            height: 540px !important;
+            max-width: 856px !important;
             aspect-ratio: auto !important;
+            transform: scale(0.3773);
+            transform-origin: top left;
         }
         @media print {
             body, html {

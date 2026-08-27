@@ -4,7 +4,7 @@
   "type": "project",
   "require": {
     "php": "^8.0",
-    "mpdf/mpdf": "*"
+    "mpdf/mpdf": "^8.3"
   },
   "autoload": {
     "psr-4": {
