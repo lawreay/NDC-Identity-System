@@ -40,8 +40,10 @@ final class CardExportService
             'margin_header' => 0,
             'margin_footer' => 0,
             'mode' => 'utf-8',
+            'dpi' => 260,
             'tempDir' => sys_get_temp_dir(),
         ]);
+        $mpdf->SetAutoPageBreak(false, 0);
 
         // Set metadata
         $mpdf->SetTitle('Student ID Card - ' . $studentNumber);
@@ -107,19 +109,27 @@ final class CardExportService
             background: none;
             font-family: Arial, sans-serif;
         }
+        html, body {
+            width: 85mm;
+            height: 53mm;
+            overflow: hidden;
+            page-break-after: avoid;
+            page-break-before: avoid;
+        }
         .card-container {
-            width: 323px;
-            height: 204px;
+            width: 850px;
+            height: 534px;
             overflow: hidden;
             position: relative;
+            page-break-inside: avoid;
         }
         .ndc-id-card-wrapper {
-            width: 856px !important;
-            height: 540px !important;
-            max-width: 856px !important;
+            width: 850px !important;
+            height: 534px !important;
+            max-width: 850px !important;
             aspect-ratio: auto !important;
-            transform: scale(0.3773);
-            transform-origin: top left;
+            page-break-inside: avoid;
+            page-break-after: avoid;
         }
         @media print {
             body, html {
@@ -187,8 +197,10 @@ HTML;
             'margin_header' => 0,
             'margin_footer' => 0,
             'mode' => 'utf-8',
+            'dpi' => 260,
             'tempDir' => sys_get_temp_dir(),
         ]);
+        $mpdf->SetAutoPageBreak(false, 0);
 
         $this->writeHtmlInChunks($mpdf, $this->wrapCardHtml($html));
 
