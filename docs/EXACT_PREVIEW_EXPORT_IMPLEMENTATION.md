@@ -9,6 +9,7 @@ The preview and PDF export now use the same selected template:
 - The generated PDF keeps the card dimensions at 85.6 x 53.98 mm, with front and back on separate pages.
 - The exporter scales the 856 x 540 preview canvas to the physical page and avoids mPDF's conflicting orientation override.
 - Large rendered HTML is written in chunks and the PCRE limit is raised for embedded images, preventing mPDF's generic export failure.
+- When Chrome or Edge is installed, headless Chromium is used first so browser CSS is rendered as a fixed preview canvas; mPDF remains the fallback renderer.
 
 This prevents exporting a different template from the one visible in the preview.
 
@@ -39,4 +40,4 @@ The QR code currently uses an external service URL. For reliable offline exports
 composer install
 ```
 
-The remaining work for pixel-identical output is replacing or supplementing mPDF with a locally available Chromium renderer.
+On Windows, Chrome is detected at `C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe` and Edge is used as a fallback when Chrome is unavailable.
