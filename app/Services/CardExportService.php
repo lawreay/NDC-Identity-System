@@ -113,42 +113,77 @@ final class CardExportService
     private function exportWithChrome(string $htmlFront, string $htmlBack, string $studentNumber, string $chromePath): string
     {
         $token = bin2hex(random_bytes(8));
-        $htmlPath = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'card_' . $token . '.html';
         $pdfPath = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'card_' . $token . '.pdf';
         $profilePath = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'chrome_card_' . $token;
+        $frontImagePath = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'card_' . $token . '_front.png';
+        $backImagePath = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'card_' . $token . '_back.png';
+        $pdfHtmlPath = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'card_' . $token . '_pdf.html';
 
-        $document = '<!DOCTYPE html><html><head><meta charset="utf-8"><style>'
-            . '@page{size:85.6mm 53.98mm;margin:0}'
+        $documentPrefix = '<!DOCTYPE html><html><head><meta charset="utf-8"><style>'
             . '*{box-sizing:border-box}'
-            . 'html,body{margin:0;padding:0;width:323px;height:204px}'
-            . '.page{width:323px;height:204px;overflow:hidden;page-break-after:always;position:relative}'
-            . '.page:last-child{page-break-after:auto}'
-            . '.card{width:856px;height:540px;transform:scale(0.3773);transform-origin:top left}'
-            . '</style></head><body>'
-            . '<div class="page"><div class="card">' . $htmlFront . '</div></div>'
-            . '<div class="page"><div class="card">' . $htmlBack . '</div></div>'
-            . '</body></html>';
+            . 'html,body{margin:0;padding:0;width:856px;height:540px;overflow:hidden}'
+            . '</style></head><body><div style="width:856px;height:540px;overflow:hidden">';
+        $documentSuffix = '</div></body></html>';
 
-        if (file_put_contents($htmlPath, $document) === false) {
+        $frontHtmlPath = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'card_' . $token . '_front.html';
+        $backHtmlPath = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'card_' . $token . '_back.html';
+
+        if (file_put_contents($frontHtmlPath, $documentPrefix . $htmlFront . $documentSuffix) === false
+            || file_put_contents($backHtmlPath, $documentPrefix . $htmlBack . $documentSuffix) === false) {
             throw new RuntimeException('Could not create the temporary browser export document.');
         }
 
-        $command = escapeshellarg($chromePath)
-            . ' --headless=new --disable-gpu --no-sandbox --allow-file-access-from-files'
-            . ' --no-pdf-header-footer --user-data-dir=' . escapeshellarg($profilePath)
-            . ' --print-to-pdf=' . escapeshellarg($pdfPath)
-            . ' ' . escapeshellarg($htmlPath);
-
-        exec($command, $output, $exitCode);
-        $this->removeTemporaryPath($htmlPath);
+        $this->captureChromeImage($chromePath, $frontHtmlPath, $frontImagePath, $profilePath . '_front');
+        $this->captureChromeImage($chromePath, $backHtmlPath, $backImagePath, $profilePath . '_back');
+        $this->removeTemporaryPath($frontHtmlPath);
+        $this->removeTemporaryPath($backHtmlPath);
         $this->removeTemporaryPath($profilePath);
 
-        if ($exitCode !== 0 || !is_file($pdfPath)) {
-            $this->removeTemporaryPath($pdfPath);
-            throw new RuntimeException('Chrome could not generate the PDF.');
+        $pdfDocument = '<!DOCTYPE html><html><head><meta charset="utf-8"><style>'
+            . '@page{size:85.6mm 53.98mm;margin:0}'
+            . 'html,body{margin:0;padding:0;width:85.6mm;height:53.98mm}'
+            . '.page{width:85.6mm;height:53.98mm;page-break-after:always;overflow:hidden}'
+            . '.page:last-child{page-break-after:auto}'
+            . 'img{display:block;width:85.6mm;height:53.98mm}'
+            . '</style></head><body>'
+            . '<div class="page"><img src="file:///' . str_replace('\\', '/', $frontImagePath) . '"></div>'
+            . '<div class="page"><img src="file:///' . str_replace('\\', '/', $backImagePath) . '"></div>'
+            . '</body></html>';
+        file_put_contents($pdfHtmlPath, $pdfDocument);
+
+        $pdfCommand = escapeshellarg($chromePath)
+            . ' --headless=new --disable-gpu --no-sandbox --allow-file-access-from-files'
+            . ' --no-pdf-header-footer --user-data-dir=' . escapeshellarg($profilePath . '_pdf')
+            . ' --print-to-pdf=' . escapeshellarg($pdfPath)
+            . ' ' . escapeshellarg($pdfHtmlPath);
+        exec($pdfCommand, $pdfOutput, $pdfExitCode);
+        $this->removeTemporaryPath($pdfHtmlPath);
+        $this->removeTemporaryPath($profilePath . '_pdf');
+
+        $this->removeTemporaryPath($frontImagePath);
+        $this->removeTemporaryPath($backImagePath);
+
+        if ($pdfExitCode !== 0 || !is_file($pdfPath)) {
+            throw new RuntimeException('Could not create the snapshot PDF.');
         }
 
         return $pdfPath;
+    }
+
+    private function captureChromeImage(string $chromePath, string $htmlPath, string $imagePath, string $profilePath): void
+    {
+        $command = escapeshellarg($chromePath)
+            . ' --headless=new --disable-gpu --no-sandbox --allow-file-access-from-files'
+            . ' --hide-scrollbars --force-device-scale-factor=2 --window-size=856,540 --screenshot=' . escapeshellarg($imagePath)
+            . ' --user-data-dir=' . escapeshellarg($profilePath)
+            . ' ' . escapeshellarg($htmlPath);
+
+        exec($command, $output, $exitCode);
+        $this->removeTemporaryPath($profilePath);
+
+        if ($exitCode !== 0 || !is_file($imagePath)) {
+            throw new RuntimeException('Chrome could not render the card snapshot.');
+        }
     }
 
     private function removeTemporaryPath(string $path): void
