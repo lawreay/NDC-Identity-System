@@ -27,6 +27,15 @@ final class CardExportService
             );
         }
 
+        $chromePath = $this->findChromePath();
+        if ($chromePath !== null) {
+            try {
+                return $this->exportWithChrome($htmlFront, $htmlBack, $studentNumber, $chromePath);
+            } catch (Throwable $exception) {
+                error_log('Chrome card export failed; using mPDF fallback: ' . $exception->getMessage());
+            }
+        }
+
         ini_set('pcre.backtrack_limit', '10000000');
 
         // Standard ID card size: 85.6mm x 53.98mm (3.37" x 2.125")
@@ -82,6 +91,81 @@ final class CardExportService
         }
 
         return $outputPath;
+    }
+
+    private function findChromePath(): ?string
+    {
+        $paths = [
+            'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
+            'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
+            'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe',
+        ];
+
+        foreach ($paths as $path) {
+            if (is_file($path)) {
+                return $path;
+            }
+        }
+
+        return null;
+    }
+
+    private function exportWithChrome(string $htmlFront, string $htmlBack, string $studentNumber, string $chromePath): string
+    {
+        $token = bin2hex(random_bytes(8));
+        $htmlPath = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'card_' . $token . '.html';
+        $pdfPath = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'card_' . $token . '.pdf';
+        $profilePath = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'chrome_card_' . $token;
+
+        $document = '<!DOCTYPE html><html><head><meta charset="utf-8"><style>'
+            . '@page{size:85.6mm 53.98mm;margin:0}'
+            . '*{box-sizing:border-box}'
+            . 'html,body{margin:0;padding:0;width:323px;height:204px}'
+            . '.page{width:323px;height:204px;overflow:hidden;page-break-after:always;position:relative}'
+            . '.page:last-child{page-break-after:auto}'
+            . '.card{width:856px;height:540px;transform:scale(0.3773);transform-origin:top left}'
+            . '</style></head><body>'
+            . '<div class="page"><div class="card">' . $htmlFront . '</div></div>'
+            . '<div class="page"><div class="card">' . $htmlBack . '</div></div>'
+            . '</body></html>';
+
+        if (file_put_contents($htmlPath, $document) === false) {
+            throw new RuntimeException('Could not create the temporary browser export document.');
+        }
+
+        $command = escapeshellarg($chromePath)
+            . ' --headless=new --disable-gpu --no-sandbox --allow-file-access-from-files'
+            . ' --no-pdf-header-footer --user-data-dir=' . escapeshellarg($profilePath)
+            . ' --print-to-pdf=' . escapeshellarg($pdfPath)
+            . ' ' . escapeshellarg($htmlPath);
+
+        exec($command, $output, $exitCode);
+        $this->removeTemporaryPath($htmlPath);
+        $this->removeTemporaryPath($profilePath);
+
+        if ($exitCode !== 0 || !is_file($pdfPath)) {
+            $this->removeTemporaryPath($pdfPath);
+            throw new RuntimeException('Chrome could not generate the PDF.');
+        }
+
+        return $pdfPath;
+    }
+
+    private function removeTemporaryPath(string $path): void
+    {
+        if (is_file($path)) {
+            @unlink($path);
+            return;
+        }
+
+        if (is_dir($path)) {
+            foreach (scandir($path) ?: [] as $entry) {
+                if ($entry !== '.' && $entry !== '..') {
+                    $this->removeTemporaryPath($path . DIRECTORY_SEPARATOR . $entry);
+                }
+            }
+            @rmdir($path);
+        }
     }
 
     /**
