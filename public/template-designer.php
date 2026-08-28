@@ -166,8 +166,9 @@ if ($template !== null && is_array($template)) {
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.css">
     <style>
         body { background: #f6f8fb; }
-        .preview-frame { border: 1px solid #d9e2ef; border-radius: 12px; background: #fff; min-height: 360px; padding: 16px; overflow:auto; display:flex; justify-content:center; align-items:center; }
-        .preview-frame .ndc-id-card-wrapper { box-shadow: 0 10px 30px rgba(0,0,0,0.08); width:min(856px, 100%); aspect-ratio:856 / 540; height:auto; flex:0 0 auto; }
+        .preview-frame { --card-preview-scale: 1; border: 1px solid #d9e2ef; border-radius: 12px; background: #fff; min-height: 360px; padding: 16px; overflow:auto; display:flex; justify-content:center; align-items:center; }
+        .preview-card-shell { width:856px; height:540px; flex:0 0 auto; }
+        .preview-frame .ndc-id-card-wrapper { box-shadow: 0 10px 30px rgba(0,0,0,0.08); width:856px !important; height:540px !important; max-width:none !important; aspect-ratio:auto !important; flex:0 0 auto; transform:scale(var(--card-preview-scale)); transform-origin:top left; }
         .preview-frame .ndc-id-card-wrapper > * { box-sizing:border-box; }
         .guide-card { border-left: 4px solid #0d6efd; }
         .code-block { background: #111827; color: #f9fafb; padding: 12px; border-radius: 10px; overflow-x: auto; }
@@ -303,13 +304,13 @@ if ($template !== null && is_array($template)) {
                     <div class="col-lg-6">
                         <h3 class="h6">Front Preview</h3>
                         <div class="preview-frame">
-                            <?= $frontPreview ?>
+                            <div class="preview-card-shell"><?= $frontPreview ?></div>
                         </div>
                     </div>
                     <div class="col-lg-6">
                         <h3 class="h6">Back Preview</h3>
                         <div class="preview-frame">
-                            <?= $backPreview ?>
+                            <div class="preview-card-shell"><?= $backPreview ?></div>
                         </div>
                     </div>
                 </div>
@@ -495,33 +496,65 @@ if ($template !== null && is_array($template)) {
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/addon/edit/closebrackets.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/addon/edit/matchbrackets.min.js"></script>
 <script>
-    const frontEditor = CodeMirror(document.getElementById('frontEditor'), {
-        value: document.getElementById('frontHtmlInput').value,
-        mode: 'htmlmixed',
-        lineNumbers: true,
-        autoCloseBrackets: true,
-        matchBrackets: true,
-        theme: 'default',
-    });
+    const previewCardWidth = 856;
+    const previewCardHeight = 540;
 
-    const backEditor = CodeMirror(document.getElementById('backEditor'), {
-        value: document.getElementById('backHtmlInput').value,
-        mode: 'htmlmixed',
-        lineNumbers: true,
-        autoCloseBrackets: true,
-        matchBrackets: true,
-        theme: 'default',
-    });
+    function syncPreviewScales() {
+        document.querySelectorAll('.preview-frame').forEach(frame => {
+            const style = window.getComputedStyle(frame);
+            const horizontalPadding = parseFloat(style.paddingLeft) + parseFloat(style.paddingRight);
+            const availableWidth = Math.max(0, frame.clientWidth - horizontalPadding);
+            const scale = Math.min(1, availableWidth / previewCardWidth);
+            const shell = frame.querySelector('.preview-card-shell');
 
-    const debounce = (fn, delay) => {
-        let timer;
-        return (...args) => {
-            clearTimeout(timer);
-            timer = setTimeout(() => fn(...args), delay);
+            frame.style.setProperty('--card-preview-scale', String(scale));
+            if (shell) {
+                shell.style.width = (previewCardWidth * scale) + 'px';
+                shell.style.height = (previewCardHeight * scale) + 'px';
+            }
+        });
+    }
+
+    window.addEventListener('resize', syncPreviewScales);
+    if ('ResizeObserver' in window) {
+        document.querySelectorAll('.preview-frame').forEach(frame => {
+            new ResizeObserver(syncPreviewScales).observe(frame);
+        });
+    }
+
+    const frontEditorElement = document.getElementById('frontEditor');
+    const backEditorElement = document.getElementById('backEditor');
+    const frontHtmlInput = document.getElementById('frontHtmlInput');
+    const backHtmlInput = document.getElementById('backHtmlInput');
+
+    if (frontEditorElement && backEditorElement && frontHtmlInput && backHtmlInput) {
+        const frontEditor = CodeMirror(frontEditorElement, {
+            value: frontHtmlInput.value,
+            mode: 'htmlmixed',
+            lineNumbers: true,
+            autoCloseBrackets: true,
+            matchBrackets: true,
+            theme: 'default',
+        });
+
+        const backEditor = CodeMirror(backEditorElement, {
+            value: backHtmlInput.value,
+            mode: 'htmlmixed',
+            lineNumbers: true,
+            autoCloseBrackets: true,
+            matchBrackets: true,
+            theme: 'default',
+        });
+
+        const debounce = (fn, delay) => {
+            let timer;
+            return (...args) => {
+                clearTimeout(timer);
+                timer = setTimeout(() => fn(...args), delay);
+            };
         };
-    };
 
-    const livePreviewValues = {
+        const livePreviewValues = {
         'student.full_name': <?= json_encode($student['full_name'] ?? 'Student Name', JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>,
         'student.student_id': <?= json_encode($student['student_number'] ?? 'BND001', JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>,
         'student.gender': <?= json_encode($student['gender'] ?? 'Male', JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>,
@@ -574,12 +607,13 @@ if ($template !== null && is_array($template)) {
         const back = renderTemplateHtml(backEditor.getValue());
         document.getElementById('livePreviewFront').innerHTML = wrapPreviewCard(front);
         document.getElementById('livePreviewBack').innerHTML = wrapPreviewCard(back);
-        document.getElementById('frontHtmlInput').value = frontEditor.getValue();
-        document.getElementById('backHtmlInput').value = backEditor.getValue();
+        frontHtmlInput.value = frontEditor.getValue();
+        backHtmlInput.value = backEditor.getValue();
+        syncPreviewScales();
     }
 
     function wrapPreviewCard(html) {
-        return '<div class="ndc-id-card-wrapper" style="box-sizing:border-box;overflow:hidden;position:relative;background:#fff;border:1px solid #d1d5db;border-radius:10px;">' + html + '</div>';
+        return '<div class="preview-card-shell"><div class="ndc-id-card-wrapper" style="box-sizing:border-box;overflow:hidden;position:relative;background:#fff;border:1px solid #d1d5db;border-radius:10px;">' + html + '</div></div>';
     }
 
     const debouncedRender = debounce(renderLivePreview, 450);
@@ -604,6 +638,7 @@ if ($template !== null && is_array($template)) {
             const side = button.dataset.previewSide;
             document.getElementById('livePreviewFront').classList.toggle('d-none', side !== 'front');
             document.getElementById('livePreviewBack').classList.toggle('d-none', side !== 'back');
+            syncPreviewScales();
         });
     });
 
@@ -671,6 +706,9 @@ if ($template !== null && is_array($template)) {
     bindBackgroundPreview('backBackgroundInput', 'backBackgroundPreview', 'removeBackBackgroundBtn', 'remove_back_background', 'template.back_background', 'No back background uploaded');
 
     renderLivePreview();
+    } else {
+        syncPreviewScales();
+    }
 </script>
 </body>
 </html>

@@ -102,8 +102,9 @@ function escape(string $value): string
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
         body { background: #f6f8fb; }
-        .preview-frame { border: 1px solid #d9e2ef; border-radius: 12px; background: #fff; min-height: 360px; padding: 16px; overflow:auto; display:flex; justify-content:center; align-items:center; }
-        .preview-frame .ndc-id-card-wrapper { box-shadow: 0 10px 30px rgba(0,0,0,0.08); width:min(856px, 100%); aspect-ratio:856 / 540; height:auto; flex:0 0 auto; }
+        .preview-frame { --card-preview-scale: 1; border: 1px solid #d9e2ef; border-radius: 12px; background: #fff; min-height: 360px; padding: 16px; overflow:auto; display:flex; justify-content:center; align-items:center; }
+        .preview-card-shell { width:856px; height:540px; flex:0 0 auto; }
+        .preview-frame .ndc-id-card-wrapper { box-shadow: 0 10px 30px rgba(0,0,0,0.08); width:856px !important; height:540px !important; max-width:none !important; aspect-ratio:auto !important; flex:0 0 auto; transform:scale(var(--card-preview-scale)); transform-origin:top left; }
         .preview-frame .ndc-id-card-wrapper > * { box-sizing:border-box; }
         .template-selector { min-width: 220px; }
     </style>
@@ -180,7 +181,7 @@ function escape(string $value): string
                                     <button type="submit" class="btn btn-outline-primary btn-sm">Export PNG</button>
                                 </form>
                             </div>
-                            <div class="preview-frame"><?= $frontPreview ?></div>
+                            <div class="preview-frame"><div class="preview-card-shell"><?= $frontPreview ?></div></div>
                         </div>
                     </div>
                 </div>
@@ -197,7 +198,7 @@ function escape(string $value): string
                                     <button type="submit" class="btn btn-outline-primary btn-sm">Export PNG</button>
                                 </form>
                             </div>
-                            <div class="preview-frame"><?= $backPreview ?></div>
+                            <div class="preview-frame"><div class="preview-card-shell"><?= $backPreview ?></div></div>
                         </div>
                     </div>
                 </div>
@@ -205,5 +206,35 @@ function escape(string $value): string
         <?php endif; ?>
     <?php endif; ?>
 </div>
+<script>
+    (function () {
+        const cardWidth = 856;
+        const cardHeight = 540;
+
+        function syncPreviewScales() {
+            document.querySelectorAll('.preview-frame').forEach(frame => {
+                const style = window.getComputedStyle(frame);
+                const horizontalPadding = parseFloat(style.paddingLeft) + parseFloat(style.paddingRight);
+                const availableWidth = Math.max(0, frame.clientWidth - horizontalPadding);
+                const scale = Math.min(1, availableWidth / cardWidth);
+                const shell = frame.querySelector('.preview-card-shell');
+
+                frame.style.setProperty('--card-preview-scale', String(scale));
+                if (shell) {
+                    shell.style.width = (cardWidth * scale) + 'px';
+                    shell.style.height = (cardHeight * scale) + 'px';
+                }
+            });
+        }
+
+        window.addEventListener('resize', syncPreviewScales);
+        if ('ResizeObserver' in window) {
+            document.querySelectorAll('.preview-frame').forEach(frame => {
+                new ResizeObserver(syncPreviewScales).observe(frame);
+            });
+        }
+        syncPreviewScales();
+    }());
+</script>
 </body>
 </html>

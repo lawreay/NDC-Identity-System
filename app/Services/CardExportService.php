@@ -11,6 +11,7 @@ final class CardExportService
     private const CARD_HEIGHT = 540;
     private const CARD_WIDTH_MM = 85.6;
     private const CARD_HEIGHT_MM = 53.98;
+    private const CARD_DPI = 254;
     private const PNG_SCALE = 2;
 
     public function exportCardPng(string $html, string $studentNumber, string $side): string
@@ -93,7 +94,7 @@ final class CardExportService
             'margin_header' => 0,
             'margin_footer' => 0,
             'mode' => 'utf-8',
-            'dpi' => 260,
+            'dpi' => self::CARD_DPI,
             'tempDir' => sys_get_temp_dir(),
         ]);
         $mpdf->SetAutoPageBreak(false, 0);
@@ -372,7 +373,7 @@ HTML;
             'margin_header' => 0,
             'margin_footer' => 0,
             'mode' => 'utf-8',
-            'dpi' => 260,
+            'dpi' => self::CARD_DPI,
             'tempDir' => sys_get_temp_dir(),
         ]);
         $mpdf->SetAutoPageBreak(false, 0);
