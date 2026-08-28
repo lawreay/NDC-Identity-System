@@ -9,6 +9,8 @@ final class CardExportService
 {
     private const CARD_WIDTH = 856;
     private const CARD_HEIGHT = 540;
+    private const CARD_WIDTH_MM = 85.6;
+    private const CARD_HEIGHT_MM = 53.98;
     private const PNG_SCALE = 2;
 
     public function exportCardPng(string $html, string $studentNumber, string $side): string
@@ -27,12 +29,7 @@ final class CardExportService
         $imagePath = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'card_' . $token . '_' . $side . '.png';
         $profilePath = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'chrome_card_' . $token;
 
-        $document = '<!DOCTYPE html><html><head><meta charset="utf-8"><style>'
-            . '*{box-sizing:border-box}'
-            . 'html,body{margin:0;padding:0;width:' . self::CARD_WIDTH . 'px;height:' . self::CARD_HEIGHT . 'px;overflow:hidden}'
-            . '.card{width:' . self::CARD_WIDTH . 'px;height:' . self::CARD_HEIGHT . 'px;overflow:hidden}'
-            . '.ndc-id-card-wrapper{width:' . self::CARD_WIDTH . 'px !important;height:' . self::CARD_HEIGHT . 'px !important;max-width:none !important;aspect-ratio:auto !important}'
-            . '</style></head><body><div class="card">' . $html . '</div></body></html>';
+        $document = $this->wrapBrowserSnapshotHtml($html);
 
         if (file_put_contents($htmlPath, $document) === false) {
             throw new RuntimeException('Could not create the temporary PNG export document.');
@@ -88,7 +85,7 @@ final class CardExportService
         // Standard ID card size: 85.6mm x 53.98mm (3.37" x 2.125")
         // Landscape orientation for better presentation
         $mpdf = new Mpdf([
-            'format' => [85.6, 53.98],
+            'format' => [self::CARD_WIDTH_MM, self::CARD_HEIGHT_MM],
             'margin_left' => 0,
             'margin_right' => 0,
             'margin_top' => 0,
@@ -166,17 +163,11 @@ final class CardExportService
         $backImagePath = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'card_' . $token . '_back.png';
         $pdfHtmlPath = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'card_' . $token . '_pdf.html';
 
-        $documentPrefix = '<!DOCTYPE html><html><head><meta charset="utf-8"><style>'
-            . '*{box-sizing:border-box}'
-            . 'html,body{margin:0;padding:0;width:856px;height:540px;overflow:hidden}'
-            . '</style></head><body><div style="width:856px;height:540px;overflow:hidden">';
-        $documentSuffix = '</div></body></html>';
-
         $frontHtmlPath = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'card_' . $token . '_front.html';
         $backHtmlPath = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'card_' . $token . '_back.html';
 
-        if (file_put_contents($frontHtmlPath, $documentPrefix . $htmlFront . $documentSuffix) === false
-            || file_put_contents($backHtmlPath, $documentPrefix . $htmlBack . $documentSuffix) === false) {
+        if (file_put_contents($frontHtmlPath, $this->wrapBrowserSnapshotHtml($htmlFront)) === false
+            || file_put_contents($backHtmlPath, $this->wrapBrowserSnapshotHtml($htmlBack)) === false) {
             throw new RuntimeException('Could not create the temporary browser export document.');
         }
 
@@ -187,11 +178,11 @@ final class CardExportService
         $this->removeTemporaryPath($profilePath);
 
         $pdfDocument = '<!DOCTYPE html><html><head><meta charset="utf-8"><style>'
-            . '@page{size:85.6mm 53.98mm;margin:0}'
-            . 'html,body{margin:0;padding:0;width:85.6mm;height:53.98mm}'
-            . '.page{width:85.6mm;height:53.98mm;page-break-after:always;overflow:hidden}'
+            . '@page{size:' . self::CARD_WIDTH_MM . 'mm ' . self::CARD_HEIGHT_MM . 'mm;margin:0}'
+            . 'html,body{margin:0;padding:0;width:' . self::CARD_WIDTH_MM . 'mm;height:' . self::CARD_HEIGHT_MM . 'mm}'
+            . '.page{width:' . self::CARD_WIDTH_MM . 'mm;height:' . self::CARD_HEIGHT_MM . 'mm;page-break-after:always;overflow:hidden}'
             . '.page:last-child{page-break-after:auto}'
-            . 'img{display:block;width:85.6mm;height:53.98mm}'
+            . 'img{display:block;width:' . self::CARD_WIDTH_MM . 'mm;height:' . self::CARD_HEIGHT_MM . 'mm}'
             . '</style></head><body>'
             . '<div class="page"><img src="file:///' . str_replace('\\', '/', $frontImagePath) . '"></div>'
             . '<div class="page"><img src="file:///' . str_replace('\\', '/', $backImagePath) . '"></div>'
@@ -233,6 +224,19 @@ final class CardExportService
         }
     }
 
+    private function wrapBrowserSnapshotHtml(string $html): string
+    {
+        $width = self::CARD_WIDTH;
+        $height = self::CARD_HEIGHT;
+
+        return '<!DOCTYPE html><html><head><meta charset="utf-8"><style>'
+            . '*{box-sizing:border-box}'
+            . 'html,body{margin:0;padding:0;width:' . $width . 'px;height:' . $height . 'px;overflow:hidden;background:transparent}'
+            . '.card{width:' . $width . 'px;height:' . $height . 'px;overflow:hidden;position:relative}'
+            . '.ndc-id-card-wrapper{width:' . $width . 'px !important;height:' . $height . 'px !important;max-width:' . $width . 'px !important;aspect-ratio:' . $width . '/' . $height . ' !important}'
+            . '</style></head><body><div class="card">' . $html . '</div></body></html>';
+    }
+
     private function removeTemporaryPath(string $path): void
     {
         if (is_file($path)) {
@@ -258,6 +262,11 @@ final class CardExportService
      */
     private function wrapCardHtml(string $html): string
     {
+        $width = self::CARD_WIDTH;
+        $height = self::CARD_HEIGHT;
+        $widthMm = self::CARD_WIDTH_MM;
+        $heightMm = self::CARD_HEIGHT_MM;
+
         return <<<HTML
 <!DOCTYPE html>
 <html>
@@ -276,24 +285,24 @@ final class CardExportService
             font-family: Arial, sans-serif;
         }
         html, body {
-            width: 85mm;
-            height: 53mm;
+            width: {$widthMm}mm;
+            height: {$heightMm}mm;
             overflow: hidden;
             page-break-after: avoid;
             page-break-before: avoid;
         }
         .card-container {
-            width: 850px;
-            height: 534px;
+            width: {$width}px;
+            height: {$height}px;
             overflow: hidden;
             position: relative;
             page-break-inside: avoid;
         }
         .ndc-id-card-wrapper {
-            width: 850px !important;
-            height: 534px !important;
-            max-width: 850px !important;
-            aspect-ratio: auto !important;
+            width: {$width}px !important;
+            height: {$height}px !important;
+            max-width: {$width}px !important;
+            aspect-ratio: {$width} / {$height} !important;
             page-break-inside: avoid;
             page-break-after: avoid;
         }
@@ -355,7 +364,7 @@ HTML;
         ini_set('pcre.backtrack_limit', '10000000');
 
         $mpdf = new Mpdf([
-            'format' => [85.6, 53.98],
+            'format' => [self::CARD_WIDTH_MM, self::CARD_HEIGHT_MM],
             'margin_left' => 0,
             'margin_right' => 0,
             'margin_top' => 0,
