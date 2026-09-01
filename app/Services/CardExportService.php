@@ -4,6 +4,7 @@ namespace App\Services;
 
 use Mpdf\Mpdf;
 use RuntimeException;
+use Throwable;
 
 final class CardExportService
 {
@@ -234,7 +235,7 @@ final class CardExportService
             . '*{box-sizing:border-box}'
             . 'html,body{margin:0;padding:0;width:' . $width . 'px;height:' . $height . 'px;overflow:hidden;background:transparent}'
             . '.card{width:' . $width . 'px;height:' . $height . 'px;overflow:hidden;position:relative}'
-            . '.ndc-id-card-wrapper{width:' . $width . 'px !important;height:' . $height . 'px !important;max-width:' . $width . 'px !important;aspect-ratio:' . $width . '/' . $height . ' !important}'
+            . '.ndc-id-card-wrapper{width:' . $width . 'px !important;height:' . $height . 'px !important;min-width:' . $width . 'px !important;min-height:' . $height . 'px !important;max-width:' . $width . 'px !important;max-height:' . $height . 'px !important;aspect-ratio:' . $width . '/' . $height . ' !important;border:0 !important;border-radius:0 !important;box-shadow:none !important;display:block !important}'
             . '</style></head><body><div class="card">' . $html . '</div></body></html>';
     }
 
@@ -302,8 +303,15 @@ final class CardExportService
         .ndc-id-card-wrapper {
             width: {$width}px !important;
             height: {$height}px !important;
+            min-width: {$width}px !important;
+            min-height: {$height}px !important;
             max-width: {$width}px !important;
+            max-height: {$height}px !important;
             aspect-ratio: {$width} / {$height} !important;
+            border: 0 !important;
+            border-radius: 0 !important;
+            box-shadow: none !important;
+            display: block !important;
             page-break-inside: avoid;
             page-break-after: avoid;
         }

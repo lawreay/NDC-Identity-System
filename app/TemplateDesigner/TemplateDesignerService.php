@@ -357,7 +357,7 @@ final class TemplateDesignerService
     {
         $width = self::CARD_WIDTH;
         $height = self::CARD_HEIGHT;
-        return '<div class="ndc-id-card-wrapper" style="width:100%;max-width:' . $width . 'px;aspect-ratio:' . $width . '/' . $height . ';height:auto;box-sizing:border-box;overflow:hidden;position:relative;background:#fff;border:1px solid #d1d5db;border-radius:10px;">' . $html . '</div>';
+        return '<div class="ndc-id-card-wrapper" style="width:' . $width . 'px;height:' . $height . 'px;min-width:' . $width . 'px;min-height:' . $height . 'px;max-width:' . $width . 'px;max-height:' . $height . 'px;aspect-ratio:' . $width . '/' . $height . ';box-sizing:border-box;overflow:hidden;position:relative;background:#fff;border:1px solid #d1d5db;border-radius:10px;display:block;">' . $html . '</div>';
     }
 
     private function normalizeViewportFontSizes(string $html): string

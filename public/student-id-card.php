@@ -104,7 +104,7 @@ function escape(string $value): string
         body { background: #f6f8fb; }
         .preview-frame { --card-preview-scale: 1; border: 1px solid #d9e2ef; border-radius: 12px; background: #fff; min-height: 360px; padding: 16px; overflow:auto; display:flex; justify-content:center; align-items:center; }
         .preview-card-shell { width:856px; height:540px; flex:0 0 auto; }
-        .preview-frame .ndc-id-card-wrapper { box-shadow: 0 10px 30px rgba(0,0,0,0.08); width:856px !important; height:540px !important; max-width:none !important; aspect-ratio:auto !important; flex:0 0 auto; transform:scale(var(--card-preview-scale)); transform-origin:top left; }
+        .preview-frame .ndc-id-card-wrapper { box-shadow: 0 10px 30px rgba(0,0,0,0.08); width:856px !important; height:540px !important; min-width:856px !important; min-height:540px !important; max-width:856px !important; max-height:540px !important; aspect-ratio:856/540 !important; flex:0 0 auto; transform:scale(var(--card-preview-scale)); transform-origin:top left; }
         .preview-frame .ndc-id-card-wrapper > * { box-sizing:border-box; }
         .template-selector { min-width: 220px; }
     </style>

@@ -168,7 +168,7 @@ if ($template !== null && is_array($template)) {
         body { background: #f6f8fb; }
         .preview-frame { --card-preview-scale: 1; border: 1px solid #d9e2ef; border-radius: 12px; background: #fff; min-height: 360px; padding: 16px; overflow:auto; display:flex; justify-content:center; align-items:center; }
         .preview-card-shell { width:856px; height:540px; flex:0 0 auto; }
-        .preview-frame .ndc-id-card-wrapper { box-shadow: 0 10px 30px rgba(0,0,0,0.08); width:856px !important; height:540px !important; max-width:none !important; aspect-ratio:auto !important; flex:0 0 auto; transform:scale(var(--card-preview-scale)); transform-origin:top left; }
+        .preview-frame .ndc-id-card-wrapper { box-shadow: 0 10px 30px rgba(0,0,0,0.08); width:856px !important; height:540px !important; min-width:856px !important; min-height:540px !important; max-width:856px !important; max-height:540px !important; aspect-ratio:856/540 !important; flex:0 0 auto; transform:scale(var(--card-preview-scale)); transform-origin:top left; }
         .preview-frame .ndc-id-card-wrapper > * { box-sizing:border-box; }
         .guide-card { border-left: 4px solid #0d6efd; }
         .code-block { background: #111827; color: #f9fafb; padding: 12px; border-radius: 10px; overflow-x: auto; }
@@ -408,7 +408,7 @@ if ($template !== null && is_array($template)) {
                             <button type="button" class="btn btn-sm btn-outline-primary active" data-preview-side="front">Front</button>
                             <button type="button" class="btn btn-sm btn-outline-primary" data-preview-side="back">Back</button>
                         </div>
-                        <div class="preview-frame" id="livePreviewFront" style="display:block;"></div>
+                        <div class="preview-frame" id="livePreviewFront"></div>
                         <div class="preview-frame d-none" id="livePreviewBack"></div>
                     </div>
                 </div>
@@ -602,9 +602,16 @@ if ($template !== null && is_array($template)) {
         return result;
     }
 
+    function normalizeViewportFontSizes(html) {
+        return html.replace(/font-size\s*:\s*([0-9]*\.?[0-9]+)vw/gi, (match, size) => {
+            const normalized = (Number.parseFloat(size) * 13).toFixed(2).replace(/\.?0+$/, '');
+            return 'font-size:' + normalized + 'px';
+        });
+    }
+
     function renderLivePreview() {
-        const front = renderTemplateHtml(frontEditor.getValue());
-        const back = renderTemplateHtml(backEditor.getValue());
+        const front = normalizeViewportFontSizes(renderTemplateHtml(frontEditor.getValue()));
+        const back = normalizeViewportFontSizes(renderTemplateHtml(backEditor.getValue()));
         document.getElementById('livePreviewFront').innerHTML = wrapPreviewCard(front);
         document.getElementById('livePreviewBack').innerHTML = wrapPreviewCard(back);
         frontHtmlInput.value = frontEditor.getValue();
@@ -613,7 +620,7 @@ if ($template !== null && is_array($template)) {
     }
 
     function wrapPreviewCard(html) {
-        return '<div class="preview-card-shell"><div class="ndc-id-card-wrapper" style="box-sizing:border-box;overflow:hidden;position:relative;background:#fff;border:1px solid #d1d5db;border-radius:10px;">' + html + '</div></div>';
+        return '<div class="preview-card-shell"><div class="ndc-id-card-wrapper" style="width:856px;height:540px;min-width:856px;min-height:540px;max-width:856px;max-height:540px;aspect-ratio:856/540;box-sizing:border-box;overflow:hidden;position:relative;background:#fff;border:1px solid #d1d5db;border-radius:10px;display:block;">' + html + '</div></div>';
     }
 
     const debouncedRender = debounce(renderLivePreview, 450);
