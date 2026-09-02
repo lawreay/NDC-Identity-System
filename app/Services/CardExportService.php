@@ -141,11 +141,28 @@ final class CardExportService
 
     private function findChromePath(): ?string
     {
+        $localAppData = getenv('LOCALAPPDATA') ?: '';
         $paths = [
             'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
             'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
+            'C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe',
             'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe',
         ];
+
+        if ($localAppData !== '') {
+            $paths[] = $localAppData . '\\Google\\Chrome\\Application\\chrome.exe';
+            $paths[] = $localAppData . '\\Microsoft\\Edge\\Application\\msedge.exe';
+        }
+
+        foreach (explode(PATH_SEPARATOR, getenv('PATH') ?: '') as $directory) {
+            if ($directory === '') {
+                continue;
+            }
+
+            $paths[] = rtrim($directory, '\\/') . DIRECTORY_SEPARATOR . 'chrome.exe';
+            $paths[] = rtrim($directory, '\\/') . DIRECTORY_SEPARATOR . 'msedge.exe';
+            $paths[] = rtrim($directory, '\\/') . DIRECTORY_SEPARATOR . 'chromium.exe';
+        }
 
         foreach ($paths as $path) {
             if (is_file($path)) {
@@ -224,6 +241,16 @@ final class CardExportService
         if ($exitCode !== 0 || !is_file($imagePath)) {
             throw new RuntimeException('Chrome could not render the card snapshot.');
         }
+
+        $dimensions = @getimagesize($imagePath);
+        $expectedWidth = self::CARD_WIDTH * self::PNG_SCALE;
+        $expectedHeight = self::CARD_HEIGHT * self::PNG_SCALE;
+        if ($dimensions === false || $dimensions[0] !== $expectedWidth || $dimensions[1] !== $expectedHeight) {
+            $actual = $dimensions === false ? 'unknown dimensions' : $dimensions[0] . 'x' . $dimensions[1];
+            throw new RuntimeException(
+                'Chrome rendered the PNG at ' . $actual . '; expected ' . $expectedWidth . 'x' . $expectedHeight . '.'
+            );
+        }
     }
 
     private function wrapBrowserSnapshotHtml(string $html): string
@@ -232,11 +259,11 @@ final class CardExportService
         $height = self::CARD_HEIGHT;
 
         return '<!DOCTYPE html><html><head><meta charset="utf-8"><style>'
-            . '*{box-sizing:border-box}'
-            . 'html,body{margin:0;padding:0;width:' . $width . 'px;height:' . $height . 'px;overflow:hidden;background:transparent}'
-            . '.card{width:' . $width . 'px;height:' . $height . 'px;overflow:hidden;position:relative}'
-            . '.ndc-id-card-wrapper{width:' . $width . 'px !important;height:' . $height . 'px !important;min-width:' . $width . 'px !important;min-height:' . $height . 'px !important;max-width:' . $width . 'px !important;max-height:' . $height . 'px !important;aspect-ratio:' . $width . '/' . $height . ' !important;border:0 !important;border-radius:0 !important;box-shadow:none !important;display:block !important}'
-            . '</style></head><body><div class="card">' . $html . '</div></body></html>';
+            . 'html,body{margin:0;padding:0;width:' . $width . 'px;height:' . $height . 'px;overflow:hidden;background:#fff}'
+            . 'body{display:block}'
+            . '.ndc-id-card-wrapper{width:' . $width . 'px !important;height:' . $height . 'px !important;min-width:' . $width . 'px !important;min-height:' . $height . 'px !important;max-width:' . $width . 'px !important;max-height:' . $height . 'px !important;aspect-ratio:' . $width . '/' . $height . ' !important;box-shadow:none !important;display:block !important}'
+            . '.ndc-id-card-wrapper>*{box-sizing:border-box}'
+            . '</style></head><body>' . $html . '</body></html>';
     }
 
     private function removeTemporaryPath(string $path): void

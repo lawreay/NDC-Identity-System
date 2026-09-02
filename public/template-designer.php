@@ -166,9 +166,9 @@ if ($template !== null && is_array($template)) {
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.css">
     <style>
         body { background: #f6f8fb; }
-        .preview-frame { --card-preview-scale: 1; border: 1px solid #d9e2ef; border-radius: 12px; background: #fff; min-height: 360px; padding: 16px; overflow:auto; display:flex; justify-content:center; align-items:center; }
-        .preview-card-shell { width:856px; height:540px; flex:0 0 auto; }
-        .preview-frame .ndc-id-card-wrapper { box-shadow: 0 10px 30px rgba(0,0,0,0.08); width:856px !important; height:540px !important; min-width:856px !important; min-height:540px !important; max-width:856px !important; max-height:540px !important; aspect-ratio:856/540 !important; flex:0 0 auto; transform:scale(var(--card-preview-scale)); transform-origin:top left; }
+        .preview-frame { border: 1px solid #d9e2ef; border-radius: 12px; background: #fff; min-height: 360px; padding: 16px; overflow:auto; display:block; }
+        .preview-card-shell { width:856px; height:540px; margin:0 auto; }
+        .preview-frame .ndc-id-card-wrapper { box-shadow: 0 10px 30px rgba(0,0,0,0.08); width:856px !important; height:540px !important; min-width:856px !important; min-height:540px !important; max-width:856px !important; max-height:540px !important; aspect-ratio:856/540 !important; display:block !important; }
         .preview-frame .ndc-id-card-wrapper > * { box-sizing:border-box; }
         .guide-card { border-left: 4px solid #0d6efd; }
         .code-block { background: #111827; color: #f9fafb; padding: 12px; border-radius: 10px; overflow-x: auto; }
@@ -501,16 +501,11 @@ if ($template !== null && is_array($template)) {
 
     function syncPreviewScales() {
         document.querySelectorAll('.preview-frame').forEach(frame => {
-            const style = window.getComputedStyle(frame);
-            const horizontalPadding = parseFloat(style.paddingLeft) + parseFloat(style.paddingRight);
-            const availableWidth = Math.max(0, frame.clientWidth - horizontalPadding);
-            const scale = Math.min(1, availableWidth / previewCardWidth);
             const shell = frame.querySelector('.preview-card-shell');
 
-            frame.style.setProperty('--card-preview-scale', String(scale));
             if (shell) {
-                shell.style.width = (previewCardWidth * scale) + 'px';
-                shell.style.height = (previewCardHeight * scale) + 'px';
+                shell.style.width = previewCardWidth + 'px';
+                shell.style.height = previewCardHeight + 'px';
             }
         });
     }

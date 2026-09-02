@@ -102,9 +102,9 @@ function escape(string $value): string
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
         body { background: #f6f8fb; }
-        .preview-frame { --card-preview-scale: 1; border: 1px solid #d9e2ef; border-radius: 12px; background: #fff; min-height: 360px; padding: 16px; overflow:auto; display:flex; justify-content:center; align-items:center; }
-        .preview-card-shell { width:856px; height:540px; flex:0 0 auto; }
-        .preview-frame .ndc-id-card-wrapper { box-shadow: 0 10px 30px rgba(0,0,0,0.08); width:856px !important; height:540px !important; min-width:856px !important; min-height:540px !important; max-width:856px !important; max-height:540px !important; aspect-ratio:856/540 !important; flex:0 0 auto; transform:scale(var(--card-preview-scale)); transform-origin:top left; }
+        .preview-frame { border: 1px solid #d9e2ef; border-radius: 12px; background: #fff; min-height: 360px; padding: 16px; overflow:auto; display:block; }
+        .preview-card-shell { width:856px; height:540px; margin:0 auto; }
+        .preview-frame .ndc-id-card-wrapper { box-shadow: 0 10px 30px rgba(0,0,0,0.08); width:856px !important; height:540px !important; min-width:856px !important; min-height:540px !important; max-width:856px !important; max-height:540px !important; aspect-ratio:856/540 !important; display:block !important; }
         .preview-frame .ndc-id-card-wrapper > * { box-sizing:border-box; }
         .template-selector { min-width: 220px; }
     </style>
@@ -213,16 +213,11 @@ function escape(string $value): string
 
         function syncPreviewScales() {
             document.querySelectorAll('.preview-frame').forEach(frame => {
-                const style = window.getComputedStyle(frame);
-                const horizontalPadding = parseFloat(style.paddingLeft) + parseFloat(style.paddingRight);
-                const availableWidth = Math.max(0, frame.clientWidth - horizontalPadding);
-                const scale = Math.min(1, availableWidth / cardWidth);
                 const shell = frame.querySelector('.preview-card-shell');
 
-                frame.style.setProperty('--card-preview-scale', String(scale));
                 if (shell) {
-                    shell.style.width = (cardWidth * scale) + 'px';
-                    shell.style.height = (cardHeight * scale) + 'px';
+                    shell.style.width = cardWidth + 'px';
+                    shell.style.height = cardHeight + 'px';
                 }
             });
         }
