@@ -74,6 +74,10 @@ final class CardExportService
 
     private function renderInBrowser(string $html, string $outputPath, string $format): void
     {
+        if (!function_exists('proc_open')) {
+            throw new RuntimeException('Card export is unavailable because PHP proc_open() is disabled. Enable proc_open or configure a server-side Chromium export worker.');
+        }
+
         $browser = $this->browserBinary();
         $directory = CardRenderer::temporaryDirectory();
         $htmlPath = $directory . DIRECTORY_SEPARATOR . 'card-export-' . bin2hex(random_bytes(8)) . '.html';
@@ -96,10 +100,18 @@ final class CardExportService
         }
 
         $startedAt = microtime(true);
+        $stableOutputSince = null;
         do {
             $status = proc_get_status($process);
             if (!$status['running']) {
                 break;
+            }
+            if (is_file($outputPath) && filesize($outputPath) > 0) {
+                $stableOutputSince ??= microtime(true);
+                if (microtime(true) - $stableOutputSince >= 0.5) {
+                    proc_terminate($process);
+                    break;
+                }
             }
             if (microtime(true) - $startedAt > 30) {
                 proc_terminate($process);
@@ -111,7 +123,7 @@ final class CardExportService
             usleep(100000);
         } while (true);
 
-        $exitCode = proc_close($process);
+        proc_close($process);
         self::cleanupFile($htmlPath);
         $this->removeDirectory($profilePath);
         if (!is_file($outputPath) || filesize($outputPath) === 0) {
@@ -130,7 +142,10 @@ final class CardExportService
             'google-chrome', 'chromium', 'chromium-browser', 'msedge',
         ]);
         foreach ($candidates as $candidate) {
-            if (is_file($candidate) || (PHP_OS_FAMILY !== 'Windows' && trim((string) shell_exec('command -v ' . escapeshellarg($candidate)))) !== '') {
+            if (is_file($candidate)) {
+                return $candidate;
+            }
+            if (PHP_OS_FAMILY !== 'Windows' && function_exists('shell_exec') && trim((string) shell_exec('command -v ' . escapeshellarg($candidate))) !== '') {
                 return $candidate;
             }
         }
@@ -140,11 +155,17 @@ final class CardExportService
     private function removeDirectory(string $path): void
     {
         if (!is_dir($path)) { return; }
-        for ($attempt = 0; $attempt < 5 && is_dir($path); $attempt++) {
-            $iterator = new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($path, \RecursiveDirectoryIterator::SKIP_DOTS), \RecursiveIteratorIterator::CHILD_FIRST);
-            foreach ($iterator as $item) { $item->isDir() ? @rmdir($item->getPathname()) : @unlink($item->getPathname()); }
-            @rmdir($path);
-            if (is_dir($path)) { usleep(100000); }
+        try {
+            for ($attempt = 0; $attempt < 5 && is_dir($path); $attempt++) {
+                $iterator = new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($path, \RecursiveDirectoryIterator::SKIP_DOTS), \RecursiveIteratorIterator::CHILD_FIRST);
+                foreach ($iterator as $item) {
+                    $item->isDir() ? @rmdir($item->getPathname()) : @unlink($item->getPathname());
+                }
+                @rmdir($path);
+                if (is_dir($path)) { usleep(100000); }
+            }
+        } catch (\Throwable $exception) {
+            error_log('Card export temporary profile cleanup failed: ' . $exception->getMessage());
         }
     }
 
