@@ -1,5 +1,7 @@
 <?php
 
+require_once dirname(__DIR__, 2) . '/vendor/autoload.php';
+
 final class TemplateDesignerService
 {
     private const CARD_WIDTH = 856;
@@ -7,6 +9,9 @@ final class TemplateDesignerService
     private const CARD_ASPECT_RATIO = '1.586';
 
     private string $storagePath;
+    private ?array $templatesCache = null;
+    private array $templateCache = [];
+    private array $imageDataUriCache = [];
 
     public function __construct(?string $storagePath = null)
     {
@@ -22,6 +27,10 @@ final class TemplateDesignerService
      */
     public function listTemplates(): array
     {
+        if ($this->templatesCache !== null) {
+            return $this->templatesCache;
+        }
+
         if (!is_dir($this->storagePath)) {
             return [];
         }
@@ -53,11 +62,17 @@ final class TemplateDesignerService
             return strcmp((string) ($left['name'] ?? ''), (string) ($right['name'] ?? ''));
         });
 
+        $this->templatesCache = $templates;
+
         return $templates;
     }
 
     public function getTemplate(string $templateId): ?array
     {
+        if (array_key_exists($templateId, $this->templateCache)) {
+            return $this->templateCache[$templateId];
+        }
+
         $templatePath = $this->templateDirectory($templateId);
         if (!is_dir($templatePath)) {
             return null;
@@ -70,11 +85,14 @@ final class TemplateDesignerService
 
         $decoded = json_decode((string) file_get_contents($metadataPath), true);
         if (!is_array($decoded)) {
+            $this->templateCache[$templateId] = null;
             return null;
         }
 
         $decoded['id'] = (string) ($decoded['id'] ?? $templateId);
         $decoded['directory'] = $templateId;
+
+        $this->templateCache[$templateId] = $decoded;
 
         return $decoded;
     }
@@ -98,6 +116,8 @@ final class TemplateDesignerService
         }
 
         $this->removeDirectory($directory);
+        $this->templatesCache = null;
+        unset($this->templateCache[$templateId]);
         return !is_dir($directory);
     }
 
@@ -123,6 +143,8 @@ final class TemplateDesignerService
         $metadata['updated_at'] = date('Y-m-d H:i:s');
 
         file_put_contents($destination . DIRECTORY_SEPARATOR . 'template.json', json_encode($metadata, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+        $this->templatesCache = null;
+        $this->templateCache[$newTemplateId] = $metadata;
 
         return $metadata;
     }
@@ -214,6 +236,8 @@ final class TemplateDesignerService
         $metadata['name'] = trim((string) ($metadata['name'] ?? 'Imported Template'));
 
         file_put_contents($directory . DIRECTORY_SEPARATOR . 'template.json', json_encode($metadata, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+        $this->templatesCache = null;
+        $this->templateCache[$newTemplateId] = $metadata;
 
         return ['template' => $metadata];
     }
@@ -539,6 +563,8 @@ HTML;
         ];
 
         file_put_contents($directory . DIRECTORY_SEPARATOR . 'template.json', json_encode($metadata, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+        $this->templatesCache = null;
+        $this->templateCache[$templateId] = $metadata;
 
         return $metadata;
     }
@@ -650,9 +676,12 @@ HTML;
             return 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==';
         }
 
-        $mimeType = mime_content_type($resolvedPath) ?: 'image/png';
-        $data = base64_encode((string) file_get_contents($resolvedPath));
-        return 'data:' . $mimeType . ';base64,' . $data;
+        $publicPath = $this->publicImagePath($resolvedPath);
+        if ($publicPath !== null) {
+            return $publicPath;
+        }
+
+        return $this->imageDataUri($resolvedPath) ?? 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==';
     }
 
     public function renderBackgroundImageTag(?string $path): string
@@ -670,9 +699,52 @@ HTML;
             return '';
         }
 
+        return $this->imageDataUri($resolvedPath) ?? '';
+    }
+
+    private function imageDataUri(string $resolvedPath): ?string
+    {
+        $cacheKey = realpath($resolvedPath) ?: $resolvedPath;
+        if (array_key_exists($cacheKey, $this->imageDataUriCache)) {
+            return $this->imageDataUriCache[$cacheKey];
+        }
+
+        $contents = file_get_contents($resolvedPath);
+        if ($contents === false) {
+            $this->imageDataUriCache[$cacheKey] = null;
+            return null;
+        }
+
+        if (function_exists('imagecreatefromstring') && function_exists('imagepng')) {
+            $image = @imagecreatefromstring($contents);
+            if ($image !== false) {
+                $canvas = imagecreatetruecolor(imagesx($image), imagesy($image));
+                if ($canvas !== false) {
+                    $white = imagecolorallocate($canvas, 255, 255, 255);
+                    imagefill($canvas, 0, 0, $white);
+                    imagealphablending($canvas, true);
+                    imagecopy($canvas, $image, 0, 0, 0, 0, imagesx($image), imagesy($image));
+                    ob_start();
+                    $written = imagepng($canvas, null, 6);
+                    $pngContents = ob_get_clean();
+                    imagedestroy($canvas);
+                    imagedestroy($image);
+
+                    if ($written && is_string($pngContents) && $pngContents !== '') {
+                        $this->imageDataUriCache[$cacheKey] = 'data:image/png;base64,' . base64_encode($pngContents);
+                        return $this->imageDataUriCache[$cacheKey];
+                    }
+                } else {
+                    imagedestroy($image);
+                }
+            }
+        }
+
         $mimeType = mime_content_type($resolvedPath) ?: 'image/png';
-        $data = base64_encode((string) file_get_contents($resolvedPath));
-        return 'data:' . $mimeType . ';base64,' . $data;
+
+        $this->imageDataUriCache[$cacheKey] = 'data:' . $mimeType . ';base64,' . base64_encode($contents);
+
+        return $this->imageDataUriCache[$cacheKey];
     }
 
     /**
@@ -708,9 +780,11 @@ HTML;
         ];
 
         $data = json_encode($payload, JSON_UNESCAPED_SLASHES) ?: $verificationCode;
-        $qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=240x240&margin=8&data=' . rawurlencode($data);
+        $qrCode = new \Mpdf\QrCode\QrCode($data, \Mpdf\QrCode\QrCode::ERROR_CORRECTION_MEDIUM);
+        $png = (new \Mpdf\QrCode\Output\Png())->output($qrCode, 240, [255, 255, 255], [0, 0, 0], 9);
+        $src = 'data:image/png;base64,' . base64_encode($png);
 
-        return '<img src="' . htmlspecialchars($qrUrl, ENT_QUOTES, 'UTF-8') . '" alt="QR code" style="width:100%;height:100%;max-width:100%;max-height:100%;object-fit:contain;display:inline-block;">';
+        return '<img src="' . htmlspecialchars($src, ENT_QUOTES, 'UTF-8') . '" alt="QR code" decoding="async" style="width:100%;height:100%;max-width:100%;max-height:100%;object-fit:contain;display:inline-block;">';
     }
 
     private function renderBarcodeHtml(string $value): string
@@ -784,6 +858,17 @@ HTML;
 
         $publicPath = dirname(__DIR__, 2) . DIRECTORY_SEPARATOR . 'public' . DIRECTORY_SEPARATOR . ltrim($normalized, DIRECTORY_SEPARATOR);
         return is_file($publicPath) ? $publicPath : null;
+    }
+
+    private function publicImagePath(string $resolvedPath): ?string
+    {
+        $publicRoot = realpath(dirname(__DIR__, 2) . DIRECTORY_SEPARATOR . 'public');
+        $realPath = realpath($resolvedPath);
+        if ($publicRoot === false || $realPath === false || !str_starts_with($realPath, $publicRoot . DIRECTORY_SEPARATOR)) {
+            return null;
+        }
+
+        return str_replace('\\', '/', ltrim(substr($realPath, strlen($publicRoot)), '/\\'));
     }
 
     public function authorizedSignatureHtml(?string $path): string

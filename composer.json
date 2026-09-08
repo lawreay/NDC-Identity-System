@@ -4,7 +4,8 @@
   "type": "project",
   "require": {
     "php": "^8.0",
-    "mpdf/mpdf": "^8.3"
+    "mpdf/mpdf": "^8.3",
+    "mpdf/qrcode": "^1.1"
   },
   "autoload": {
     "psr-4": {

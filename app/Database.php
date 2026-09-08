@@ -27,7 +27,14 @@ final class Database
         try {
             self::$connection = new PDO($dsn, $config['user'], $config['pass'], $options);
         } catch (PDOException $exception) {
-            throw new RuntimeException('Unable to connect to the database: ' . $exception->getMessage(), 0, $exception);
+            error_log('Database connection failed: ' . $exception->getMessage());
+
+            $debug = filter_var(getenv('APP_DEBUG') ?: false, FILTER_VALIDATE_BOOLEAN);
+            $message = $debug
+                ? 'Unable to connect to the database: ' . $exception->getMessage()
+                : 'Unable to connect to the database.';
+
+            throw new RuntimeException($message, 0, $exception);
         }
 
         return self::$connection;

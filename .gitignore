@@ -1,0 +1,15 @@
+/.env
+/*.zip
+/*.pdf
+/*.png
+/*.md
+/docs/
+/tmp/
+/seed_*.php
+/tmp_*.php
+/storage/seed_*.py
+/storage/logs/*
+!/storage/logs/.gitignore
+/public/uploads/student_photos/*
+!/public/uploads/student_photos/.gitignore
+!/public/uploads/student_photos/.gitkeep

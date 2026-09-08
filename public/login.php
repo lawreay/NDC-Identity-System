@@ -91,6 +91,10 @@ function escape(string $value): string
                         </div>
                         <button type="submit" class="btn btn-primary w-100">Sign in</button>
                     </form>
+
+                    <div class="mt-3 text-center">
+                        <a href="forgot-password.php">Forgot password?</a>
+                    </div>
                 </div>
             </div>
         </div>

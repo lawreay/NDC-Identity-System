@@ -2,8 +2,10 @@
 require_once __DIR__ . '/../app/Database.php';
 require_once __DIR__ . '/../app/SettingsRepository.php';
 require_once __DIR__ . '/../app/Auth.php';
+require_once __DIR__ . '/../app/Services/ImageUploadService.php';
 
 use App\Auth;
+use App\Services\ImageUploadService;
 
 Auth::requireLogin();
 
@@ -79,17 +81,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     $uploadedLogo = $_FILES['organization_logo_file'] ?? null;
     if (is_array($uploadedLogo) && !empty($uploadedLogo['tmp_name'])) {
-        $logoPath = storeUpload($uploadedLogo, $uploadRoot, 'school_logo');
-        if ($logoPath !== null) {
+        try {
+            $logoPath = (new ImageUploadService())->storeOrganizationLogo($uploadedLogo, $uploadRoot);
             $input['organization_logo_path'] = $logoPath;
+        } catch (Throwable $exception) {
+            $errors[] = 'Logo upload failed: ' . $exception->getMessage();
         }
     }
 
     $uploadedSignature = $_FILES['authorized_signature_file'] ?? null;
     if (is_array($uploadedSignature) && !empty($uploadedSignature['tmp_name'])) {
-        $signaturePath = storeUpload($uploadedSignature, $uploadRoot, 'authorized_signature');
-        if ($signaturePath !== null) {
+        try {
+            $signaturePath = (new ImageUploadService())->storeSignature($uploadedSignature, $uploadRoot);
             $input['principal_signature_path'] = $signaturePath;
+        } catch (Throwable $exception) {
+            $errors[] = 'Signature upload failed: ' . $exception->getMessage();
         }
     }
 
@@ -115,35 +121,6 @@ function escape(string $value): string
     return htmlspecialchars($value, ENT_QUOTES, 'UTF-8');
 }
 
-function storeUpload(array $file, string $uploadRoot, string $baseName): ?string
-{
-    if (($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
-        return null;
-    }
-
-    // Validate file size (5 MB limit)
-    $maxFileSize = 5 * 1024 * 1024;
-    if ((int) ($file['size'] ?? 0) > $maxFileSize) {
-        return null;
-    }
-
-    $allowed = ['jpg', 'jpeg', 'png', 'webp', 'svg'];
-    $extension = strtolower(pathinfo((string) ($file['name'] ?? ''), PATHINFO_EXTENSION));
-    if (!in_array($extension, $allowed, true)) {
-        return null;
-    }
-
-    $filename = $baseName . '.' . $extension;
-    $destination = $uploadRoot . DIRECTORY_SEPARATOR . $filename;
-    if (is_uploaded_file($file['tmp_name'])) {
-        move_uploaded_file($file['tmp_name'], $destination);
-    } else {
-        copy($file['tmp_name'], $destination);
-    }
-
-    return 'uploads/settings/' . $filename;
-}
-
 function getPreviewSrc(?string $path): ?string
 {
     if ($path === null || trim($path) === '') {
@@ -166,6 +143,8 @@ function getPreviewSrc(?string $path): ?string
 
 $logoPreview = getPreviewSrc($settings['organization_logo_path'] ?? '');
 $signaturePreview = getPreviewSrc($settings['principal_signature_path'] ?? $settings['authorized_signature_path'] ?? '');
+$currentUser = Auth::user();
+$isAdministrator = ($currentUser['role'] ?? '') === 'Administrator';
 
 ?><!DOCTYPE html>
 <html lang="en">
@@ -176,13 +155,27 @@ $signaturePreview = getPreviewSrc($settings['principal_signature_path'] ?? $sett
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
 <body class="bg-light">
+<?php require_once __DIR__ . '/partials/header.php'; ?>
 <div class="container py-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
-            <h1 class="h3 mb-1">Organization Settings</h1>
-            <p class="text-muted mb-0">Manage school and authorized signature settings used by ID templates.</p>
+            <h1 class="h3 mb-1">App Settings</h1>
+            <p class="text-muted mb-0">Manage organization settings, programs, users, updates, and ID templates.</p>
         </div>
-        <a href="template-designer.php" class="btn btn-outline-secondary">Back to Template Designer</a>
+        <a href="students.php" class="btn btn-outline-secondary">Back to students</a>
+    </div>
+
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <div class="d-flex flex-wrap gap-2">
+                <a href="settings.php" class="btn btn-primary">App Settings</a>
+                <?php if ($isAdministrator): ?>
+                    <a href="admin-users.php" class="btn btn-outline-secondary">Admin Users</a>
+                    <a href="app-update.php" class="btn btn-outline-secondary">Updates</a>
+                    <a href="template-designer.php" class="btn btn-outline-secondary">Template Designer</a>
+                <?php endif; ?>
+            </div>
+        </div>
     </div>
 
     <?php if ($success !== ''): ?>
@@ -229,6 +222,7 @@ $signaturePreview = getPreviewSrc($settings['principal_signature_path'] ?? $sett
             <div class="col-md-6">
                 <label class="form-label">Academic Programs</label>
                 <textarea name="academic_programs" class="form-control" rows="4" placeholder="Enter one program per line"><?= escape($settings['academic_programs'] ?? '') ?></textarea>
+                <div class="form-text">These programs appear as options when adding or editing students.</div>
             </div>
             <div class="col-md-6">
                 <label class="form-label">Authorized Signatory Name</label>
@@ -256,7 +250,7 @@ $signaturePreview = getPreviewSrc($settings['principal_signature_path'] ?? $sett
             </div>
             <div class="col-md-6">
                 <label class="form-label">Upload School Logo</label>
-                <input type="file" name="organization_logo_file" class="form-control" accept="image/png,image/jpeg,image/webp,image/svg+xml">
+                <input type="file" name="organization_logo_file" class="form-control" accept="image/png,image/jpeg,image/webp">
                 <?php if ($logoPreview): ?>
                     <div class="mt-2">
                         <img src="<?= escape($logoPreview) ?>" alt="Current school logo" class="img-fluid rounded border" style="max-height:120px;">
@@ -270,7 +264,7 @@ $signaturePreview = getPreviewSrc($settings['principal_signature_path'] ?? $sett
             </div>
             <div class="col-md-6">
                 <label class="form-label">Upload Authorized Signature</label>
-                <input type="file" name="authorized_signature_file" class="form-control" accept="image/png,image/jpeg,image/webp,image/svg+xml">
+                <input type="file" name="authorized_signature_file" class="form-control" accept="image/png,image/jpeg,image/webp">
                 <?php if ($signaturePreview): ?>
                     <div class="mt-2">
                         <img src="<?= escape($signaturePreview) ?>" alt="Current authorized signature" class="img-fluid rounded border" style="max-height:120px;">

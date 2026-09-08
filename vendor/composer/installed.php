@@ -3,7 +3,7 @@
         'name' => 'ndc/identity-system',
         'pretty_version' => 'dev-main',
         'version' => 'dev-main',
-        'reference' => '327e884dc5dbaa9d989dfeb64367f35cd7d6b560',
+        'reference' => '1e79d43288baf769162aeaf405aaae912f19bbc3',
         'type' => 'project',
         'install_path' => __DIR__ . '/../../',
         'aliases' => array(),
@@ -37,6 +37,15 @@
             'aliases' => array(),
             'dev_requirement' => false,
         ),
+        'mpdf/qrcode' => array(
+            'pretty_version' => 'v1.2.2',
+            'version' => '1.2.2.0',
+            'reference' => 'd4fa19117a7241c30ac84902b6236a02c7a3f268',
+            'type' => 'library',
+            'install_path' => __DIR__ . '/../mpdf/qrcode',
+            'aliases' => array(),
+            'dev_requirement' => false,
+        ),
         'myclabs/deep-copy' => array(
             'pretty_version' => '1.14.0',
             'version' => '1.14.0.0',
@@ -49,7 +58,7 @@
         'ndc/identity-system' => array(
             'pretty_version' => 'dev-main',
             'version' => 'dev-main',
-            'reference' => '327e884dc5dbaa9d989dfeb64367f35cd7d6b560',
+            'reference' => '1e79d43288baf769162aeaf405aaae912f19bbc3',
             'type' => 'project',
             'install_path' => __DIR__ . '/../../',
             'aliases' => array(),

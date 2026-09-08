@@ -1,0 +1,14 @@
+Options -Indexes
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    RewriteRule ^(?:app|config|docs|storage|tmp|vendor)(?:/|$) - [F,L,NC]
+    RewriteRule ^(?:composer\.(?:json|lock)|\.env(?:\..*)?|\.git|\.gitattributes|\.gitignore|\.deploymentignore)$ - [F,L,NC]
+
+    RewriteRule ^$ public/index.php [L]
+
+    RewriteCond %{DOCUMENT_ROOT}/public/$1 -f [OR]
+    RewriteCond %{DOCUMENT_ROOT}/public/$1 -d
+    RewriteRule ^(.+)$ public/$1 [L]
+</IfModule>

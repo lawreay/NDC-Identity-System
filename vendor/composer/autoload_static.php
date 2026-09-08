@@ -23,6 +23,7 @@ class ComposerStaticInitb549a2f925a9eab4e09873b4f0b24fb7
         ),
         'M' =>
         array (
+            'Mpdf\\QrCode\\' => 12,
             'Mpdf\\PsrLogAwareTrait\\' => 22,
             'Mpdf\\PsrHttpMessageShim\\' => 24,
             'Mpdf\\' => 5,
@@ -49,6 +50,10 @@ class ComposerStaticInitb549a2f925a9eab4e09873b4f0b24fb7
         'Psr\\Http\\Message\\' =>
         array (
             0 => __DIR__ . '/..' . '/psr/http-message/src',
+        ),
+        'Mpdf\\QrCode\\' =>
+        array (
+            0 => __DIR__ . '/..' . '/mpdf/qrcode/src',
         ),
         'Mpdf\\PsrLogAwareTrait\\' =>
         array (

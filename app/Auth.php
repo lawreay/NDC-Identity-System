@@ -51,6 +51,11 @@ final class Auth
     public static function requireLogin(): array
     {
         self::boot();
+        if (!class_exists(AppUpdateService::class)) {
+            require_once __DIR__ . '/AppUpdateService.php';
+        }
+        AppUpdateService::rollbackExpiredPendingUpdate();
+
         if (!self::isAuthenticated()) {
             $redirectTo = rawurlencode($_SERVER['REQUEST_URI'] ?? '/');
             header('Location: login.php?next=' . $redirectTo);
@@ -146,7 +151,7 @@ final class Auth
     public static function requireCsrf(): void
     {
         self::boot();
-        if ($_SERVER['REQUEST_METHOD'] ?? 'GET' !== 'POST') {
+        if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'POST') {
             return;
         }
 

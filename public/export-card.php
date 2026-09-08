@@ -87,15 +87,13 @@ try {
         'accent_color' => '#f4b400',
     ];
 
-    // Render front and back HTML
-    $frontHtml = $service->renderTemplate($template, $student, $organization, $theme, 'front');
-    $backHtml = $service->renderTemplate($template, $student, $organization, $theme, 'back');
-
-    // Export to PDF
+    // Export the selected card data through the deterministic fixed-size renderer.
     $exportService = new CardExportService();
     $pdfPath = $exportService->exportCardPdf(
-        $frontHtml,
-        $backHtml,
+        $template,
+        $student,
+        $organization,
+        $theme,
         $student['student_number']
     );
 

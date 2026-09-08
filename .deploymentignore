@@ -1,0 +1,14 @@
+.git/
+.gitattributes
+.gitignore
+.deploymentignore
+/*.zip
+/*.pdf
+/*.png
+/*.md
+docs/
+tmp/
+seed_*.php
+tmp_*.php
+storage/seed_*.py
+storage/logs/*

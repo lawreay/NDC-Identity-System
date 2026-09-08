@@ -9,7 +9,7 @@ under the [GNU GPL v2 licence](LICENSE.txt).
 [![License](https://poser.pugx.org/mpdf/mpdf/license)](https://packagist.org/packages/mpdf/mpdf)
 
 
-> ⚠ If you are viewing this file on mPDF GitHub repository homepage or on Packagist, please note that
+> If you are viewing this file on mPDF GitHub repository homepage or on Packagist, please note that
 > the default repository branch is `development` which can differ from the last stable release.
 
 Requirements

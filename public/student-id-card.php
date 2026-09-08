@@ -102,11 +102,13 @@ function escape(string $value): string
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
         body { background: #f6f8fb; }
-        .preview-frame { border: 1px solid #d9e2ef; border-radius: 12px; background: #fff; min-height: 360px; padding: 16px; overflow:auto; display:block; }
+        .preview-frame { border: 1px solid #d9e2ef; border-radius: 12px; background: #fff; min-height: 360px; padding: 16px; overflow:auto; display:block; position:relative; }
         .preview-card-shell { width:856px; height:540px; margin:0 auto; }
         .preview-frame .ndc-id-card-wrapper { box-shadow: 0 10px 30px rgba(0,0,0,0.08); width:856px !important; height:540px !important; min-width:856px !important; min-height:540px !important; max-width:856px !important; max-height:540px !important; aspect-ratio:856/540 !important; display:block !important; }
         .preview-frame .ndc-id-card-wrapper > * { box-sizing:border-box; }
         .template-selector { min-width: 220px; }
+        .preview-loading { position:absolute; inset:0; z-index:5; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:0.75rem; background:rgba(255,255,255,0.88); color:#495057; transition:opacity 0.2s ease; }
+        .preview-frame.is-loaded .preview-loading { opacity:0; pointer-events:none; }
     </style>
 </head>
 <body>
@@ -119,11 +121,11 @@ function escape(string $value): string
         </div>
         <div class="d-flex gap-2">
             <?php if ($selectedTemplate !== null): ?>
-                <form method="post" action="export-card.php">
+                <form method="post" action="export-card.php" class="js-export-form">
                     <input type="hidden" name="student_id" value="<?= $id ?>">
                     <input type="hidden" name="template_id" value="<?= escape($templateId) ?>">
                     <input type="hidden" name="_csrf" value="<?= escape(Auth::csrfToken()) ?>">
-                    <button type="submit" class="btn btn-primary">Export Preview PDF</button>
+                    <button type="submit" class="btn btn-primary js-export-button">Export Preview PDF</button>
                 </form>
             <?php endif; ?>
             <a href="student-profile.php?id=<?= $id ?>" class="btn btn-outline-secondary">Back to profile</a>
@@ -173,15 +175,21 @@ function escape(string $value): string
                         <div class="card-body">
                             <div class="d-flex justify-content-between align-items-center mb-3">
                                 <h2 class="h6 mb-0">Front</h2>
-                                <form method="post" action="export-card-png.php">
+                                <form method="post" action="export-card-png.php" class="js-export-form">
                                     <input type="hidden" name="student_id" value="<?= $id ?>">
                                     <input type="hidden" name="template_id" value="<?= escape($templateId) ?>">
                                     <input type="hidden" name="side" value="front">
                                     <input type="hidden" name="_csrf" value="<?= escape(Auth::csrfToken()) ?>">
-                                    <button type="submit" class="btn btn-outline-primary btn-sm">Export PNG</button>
+                                    <button type="submit" class="btn btn-outline-primary btn-sm js-export-button">Export PNG</button>
                                 </form>
                             </div>
-                            <div class="preview-frame"><div class="preview-card-shell"><?= $frontPreview ?></div></div>
+                            <div class="preview-frame" data-card-preview>
+                                <div class="preview-loading" aria-live="polite">
+                                    <span class="spinner-border text-primary" aria-hidden="true"></span>
+                                    <span>Loading ID card...</span>
+                                </div>
+                                <div class="preview-card-shell"><?= $frontPreview ?></div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -190,15 +198,21 @@ function escape(string $value): string
                         <div class="card-body">
                             <div class="d-flex justify-content-between align-items-center mb-3">
                                 <h2 class="h6 mb-0">Back</h2>
-                                <form method="post" action="export-card-png.php">
+                                <form method="post" action="export-card-png.php" class="js-export-form">
                                     <input type="hidden" name="student_id" value="<?= $id ?>">
                                     <input type="hidden" name="template_id" value="<?= escape($templateId) ?>">
                                     <input type="hidden" name="side" value="back">
                                     <input type="hidden" name="_csrf" value="<?= escape(Auth::csrfToken()) ?>">
-                                    <button type="submit" class="btn btn-outline-primary btn-sm">Export PNG</button>
+                                    <button type="submit" class="btn btn-outline-primary btn-sm js-export-button">Export PNG</button>
                                 </form>
                             </div>
-                            <div class="preview-frame"><div class="preview-card-shell"><?= $backPreview ?></div></div>
+                            <div class="preview-frame" data-card-preview>
+                                <div class="preview-loading" aria-live="polite">
+                                    <span class="spinner-border text-primary" aria-hidden="true"></span>
+                                    <span>Loading ID card...</span>
+                                </div>
+                                <div class="preview-card-shell"><?= $backPreview ?></div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -229,6 +243,45 @@ function escape(string $value): string
             });
         }
         syncPreviewScales();
+
+        document.querySelectorAll('[data-card-preview]').forEach(frame => {
+            const images = Array.from(frame.querySelectorAll('img'));
+            if (images.length === 0) {
+                requestAnimationFrame(() => frame.classList.add('is-loaded'));
+                return;
+            }
+
+            let remaining = images.length;
+            const markLoaded = () => {
+                remaining -= 1;
+                if (remaining <= 0) {
+                    frame.classList.add('is-loaded');
+                }
+            };
+
+            images.forEach(image => {
+                if (image.complete) {
+                    markLoaded();
+                    return;
+                }
+                image.addEventListener('load', markLoaded, { once: true });
+                image.addEventListener('error', markLoaded, { once: true });
+            });
+
+            window.setTimeout(() => frame.classList.add('is-loaded'), 2500);
+        });
+
+        document.querySelectorAll('.js-export-form').forEach(form => {
+            form.addEventListener('submit', () => {
+                const button = form.querySelector('.js-export-button');
+                if (!button) {
+                    return;
+                }
+
+                button.disabled = true;
+                button.innerHTML = '<span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span><span>Preparing...</span>';
+            });
+        });
     }());
 </script>
 </body>

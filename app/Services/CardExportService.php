@@ -4,90 +4,103 @@ namespace App\Services;
 
 use Mpdf\Mpdf;
 use RuntimeException;
-use Throwable;
 
 final class CardExportService
 {
-    private const CARD_WIDTH = 856;
-    private const CARD_HEIGHT = 540;
-    private const CARD_WIDTH_MM = 85.6;
-    private const CARD_HEIGHT_MM = 53.98;
-    private const CARD_DPI = 254;
-    private const PNG_SCALE = 2;
+    public function __construct(private ?CardRenderer $renderer = null)
+    {
+        $this->renderer ??= new CardRenderer();
+    }
 
-    public function exportCardPng(string $html, string $studentNumber, string $side): string
+    /** @param array<string, mixed> $template @param array<string, mixed> $student @param array<string, mixed> $organization @param array<string, mixed> $theme */
+    public function exportCardPng(array $template, array $student, array $organization, array $theme, string $studentNumber, string $side): string
+    {
+        $path = $this->renderer->renderPng($template, $student, $organization, $theme, $side);
+        $safeNumber = preg_replace('/[^a-zA-Z0-9_-]/', '_', $studentNumber) ?: 'export';
+        $downloadPath = CardRenderer::temporaryDirectory() . DIRECTORY_SEPARATOR . 'card_' . $safeNumber . '_' . $side . '_' . bin2hex(random_bytes(6)) . '.png';
+
+        if (!copy($path, $downloadPath)) {
+            self::cleanupFile($path);
+            throw new RuntimeException('Could not prepare the PNG download.');
+        }
+
+        self::cleanupFile($path);
+        return $downloadPath;
+    }
+
+    /** @param array<string, mixed> $template @param array<string, mixed> $student @param array<string, mixed> $organization @param array<string, mixed> $theme */
+    public function exportCardPdf(array $template, array $student, array $organization, array $theme, string $studentNumber): string
+    {
+        if (!class_exists(Mpdf::class)) {
+            throw new RuntimeException('PDF export requires the mPDF library. Run: composer install');
+        }
+
+        $frontSvg = $this->renderer->renderFront($template, $student, $organization, $theme);
+        $backSvg = $this->renderer->renderBack($template, $student, $organization, $theme);
+        $mpdf = $this->newMpdf($studentNumber);
+        ini_set('pcre.backtrack_limit', '10000000');
+
+        try {
+            $mpdf->WriteHTML($frontSvg);
+            $mpdf->AddPage();
+            $mpdf->WriteHTML($backSvg);
+        } catch (\Throwable $exception) {
+            throw new RuntimeException('Failed to generate PDF: ' . $exception->getMessage(), 0, $exception);
+        }
+
+        $safeNumber = preg_replace('/[^a-zA-Z0-9_-]/', '_', $studentNumber) ?: 'export';
+        $outputPath = CardRenderer::temporaryDirectory() . DIRECTORY_SEPARATOR . 'card_' . $safeNumber . '_' . bin2hex(random_bytes(6)) . '.pdf';
+
+        try {
+            $mpdf->Output($outputPath, 'F');
+        } catch (\Throwable $exception) {
+            throw new RuntimeException('Failed to generate PDF: ' . $exception->getMessage(), 0, $exception);
+        }
+
+        if (!is_file($outputPath)) {
+            throw new RuntimeException('PDF file was not created successfully.');
+        }
+
+        return $outputPath;
+    }
+
+    /** @param array<string, mixed> $template @param array<string, mixed> $student @param array<string, mixed> $organization @param array<string, mixed> $theme */
+    public function exportCardSidePdf(array $template, array $student, array $organization, array $theme, string $studentNumber, string $side = 'front'): string
     {
         if (!in_array($side, ['front', 'back'], true)) {
             throw new RuntimeException('Invalid card side.');
         }
-
-        $chromePath = $this->findChromePath();
-        if ($chromePath === null) {
-            throw new RuntimeException('Chrome or Edge is required for PNG export.');
+        if (!class_exists(Mpdf::class)) {
+            throw new RuntimeException('PDF export requires the mPDF library. Run: composer install');
         }
 
-        $token = bin2hex(random_bytes(8));
-        $htmlPath = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'card_' . $token . '.html';
-        $imagePath = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'card_' . $token . '_' . $side . '.png';
-        $profilePath = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'chrome_card_' . $token;
-
-        $document = $this->wrapBrowserSnapshotHtml($html);
-
-        if (file_put_contents($htmlPath, $document) === false) {
-            throw new RuntimeException('Could not create the temporary PNG export document.');
-        }
-
-        try {
-            $this->captureChromeImage($chromePath, $htmlPath, $imagePath, $profilePath);
-            $sanitizedNumber = preg_replace('/[^a-zA-Z0-9_-]/', '_', $studentNumber);
-            $filename = 'card_' . ($sanitizedNumber ?: 'export') . '_' . $side . '.png';
-            $downloadPath = sys_get_temp_dir() . DIRECTORY_SEPARATOR . $filename;
-            if (!copy($imagePath, $downloadPath)) {
-                throw new RuntimeException('Could not prepare the PNG download.');
-            }
-            return $downloadPath;
-        } finally {
-            $this->removeTemporaryPath($htmlPath);
-            $this->removeTemporaryPath($imagePath);
-            $this->removeTemporaryPath($profilePath);
-        }
-    }
-
-    /**
-     * Export a student card as PDF with both front and back
-     * 
-     * @param string $htmlFront The front side HTML
-     * @param string $htmlBack The back side HTML
-     * @param string $studentNumber For filename reference
-     * @return string Path to the generated PDF file
-     * @throws RuntimeException If PDF generation fails
-     */
-    public function exportCardPdf(
-        string $htmlFront,
-        string $htmlBack,
-        string $studentNumber
-    ): string {
-        if (!class_exists('Mpdf\Mpdf')) {
-            throw new RuntimeException(
-                'mPDF library not installed. Run: composer require mpdf/mpdf'
-            );
-        }
-
-        $chromePath = $this->findChromePath();
-        if ($chromePath !== null) {
-            try {
-                return $this->exportWithChrome($htmlFront, $htmlBack, $studentNumber, $chromePath);
-            } catch (Throwable $exception) {
-                error_log('Chrome card export failed; using mPDF fallback: ' . $exception->getMessage());
-            }
-        }
-
+        $svg = $side === 'front'
+            ? $this->renderer->renderFront($template, $student, $organization, $theme)
+            : $this->renderer->renderBack($template, $student, $organization, $theme);
+        $mpdf = $this->newMpdf($studentNumber);
         ini_set('pcre.backtrack_limit', '10000000');
 
-        // Standard ID card size: 85.6mm x 53.98mm (3.37" x 2.125")
-        // Landscape orientation for better presentation
+        try {
+            $mpdf->WriteHTML($svg);
+        } catch (\Throwable $exception) {
+            throw new RuntimeException('Failed to generate PDF: ' . $exception->getMessage(), 0, $exception);
+        }
+
+        $safeNumber = preg_replace('/[^a-zA-Z0-9_-]/', '_', $studentNumber) ?: 'export';
+        $outputPath = CardRenderer::temporaryDirectory() . DIRECTORY_SEPARATOR . 'card_' . $safeNumber . '_' . $side . '_' . bin2hex(random_bytes(6)) . '.pdf';
+        $mpdf->Output($outputPath, 'F');
+
+        if (!is_file($outputPath)) {
+            throw new RuntimeException('PDF file was not created successfully.');
+        }
+
+        return $outputPath;
+    }
+
+    private function newMpdf(string $studentNumber): Mpdf
+    {
         $mpdf = new Mpdf([
-            'format' => [self::CARD_WIDTH_MM, self::CARD_HEIGHT_MM],
+            'format' => [CardRenderer::CARD_WIDTH_MM, CardRenderer::CARD_HEIGHT_MM],
             'margin_left' => 0,
             'margin_right' => 0,
             'margin_top' => 0,
@@ -95,359 +108,19 @@ final class CardExportService
             'margin_header' => 0,
             'margin_footer' => 0,
             'mode' => 'utf-8',
-            'dpi' => self::CARD_DPI,
-            'tempDir' => sys_get_temp_dir(),
+            'dpi' => CardRenderer::CARD_DPI,
+            'tempDir' => CardRenderer::temporaryDirectory(),
         ]);
         $mpdf->SetAutoPageBreak(false, 0);
-
-        // Set metadata
         $mpdf->SetTitle('Student ID Card - ' . $studentNumber);
         $mpdf->SetAuthor('NDC Identity System');
         $mpdf->SetSubject('Student Identification Card');
         $mpdf->SetKeywords('student, id, card, identity');
-
-        // Add front side
-        $this->writeHtmlInChunks($mpdf, $this->wrapCardHtml($htmlFront));
-
-        // Add page break for back side
-        $mpdf->AddPage();
-
-        // Add back side
-        $this->writeHtmlInChunks($mpdf, $this->wrapCardHtml($htmlBack));
-
-        // Generate output filename
-        $sanitizedNumber = preg_replace('/[^a-zA-Z0-9_-]/', '_', $studentNumber);
-        $filename = 'card_' . ($sanitizedNumber ?: 'export') . '_' . time() . '.pdf';
-
-        // Save to temporary directory
-        $outputPath = sys_get_temp_dir() . DIRECTORY_SEPARATOR . $filename;
-
-        try {
-            $mpdf->Output($outputPath, 'F');
-        } catch (\Throwable $exception) {
-            throw new RuntimeException(
-                'Failed to generate PDF: ' . $exception->getMessage(),
-                0,
-                $exception
-            );
-        }
-
-        if (!file_exists($outputPath)) {
-            throw new RuntimeException('PDF file was not created successfully');
-        }
-
-        return $outputPath;
+        return $mpdf;
     }
 
-    private function findChromePath(): ?string
-    {
-        $localAppData = getenv('LOCALAPPDATA') ?: '';
-        $paths = [
-            'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
-            'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
-            'C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe',
-            'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe',
-        ];
-
-        if ($localAppData !== '') {
-            $paths[] = $localAppData . '\\Google\\Chrome\\Application\\chrome.exe';
-            $paths[] = $localAppData . '\\Microsoft\\Edge\\Application\\msedge.exe';
-        }
-
-        foreach (explode(PATH_SEPARATOR, getenv('PATH') ?: '') as $directory) {
-            if ($directory === '') {
-                continue;
-            }
-
-            $paths[] = rtrim($directory, '\\/') . DIRECTORY_SEPARATOR . 'chrome.exe';
-            $paths[] = rtrim($directory, '\\/') . DIRECTORY_SEPARATOR . 'msedge.exe';
-            $paths[] = rtrim($directory, '\\/') . DIRECTORY_SEPARATOR . 'chromium.exe';
-        }
-
-        foreach ($paths as $path) {
-            if (is_file($path)) {
-                return $path;
-            }
-        }
-
-        return null;
-    }
-
-    private function exportWithChrome(string $htmlFront, string $htmlBack, string $studentNumber, string $chromePath): string
-    {
-        $token = bin2hex(random_bytes(8));
-        $pdfPath = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'card_' . $token . '.pdf';
-        $profilePath = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'chrome_card_' . $token;
-        $frontImagePath = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'card_' . $token . '_front.png';
-        $backImagePath = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'card_' . $token . '_back.png';
-        $pdfHtmlPath = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'card_' . $token . '_pdf.html';
-
-        $frontHtmlPath = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'card_' . $token . '_front.html';
-        $backHtmlPath = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'card_' . $token . '_back.html';
-
-        if (file_put_contents($frontHtmlPath, $this->wrapBrowserSnapshotHtml($htmlFront)) === false
-            || file_put_contents($backHtmlPath, $this->wrapBrowserSnapshotHtml($htmlBack)) === false) {
-            throw new RuntimeException('Could not create the temporary browser export document.');
-        }
-
-        $this->captureChromeImage($chromePath, $frontHtmlPath, $frontImagePath, $profilePath . '_front');
-        $this->captureChromeImage($chromePath, $backHtmlPath, $backImagePath, $profilePath . '_back');
-        $this->removeTemporaryPath($frontHtmlPath);
-        $this->removeTemporaryPath($backHtmlPath);
-        $this->removeTemporaryPath($profilePath);
-
-        $pdfDocument = '<!DOCTYPE html><html><head><meta charset="utf-8"><style>'
-            . '@page{size:' . self::CARD_WIDTH_MM . 'mm ' . self::CARD_HEIGHT_MM . 'mm;margin:0}'
-            . 'html,body{margin:0;padding:0;width:' . self::CARD_WIDTH_MM . 'mm;height:' . self::CARD_HEIGHT_MM . 'mm}'
-            . '.page{width:' . self::CARD_WIDTH_MM . 'mm;height:' . self::CARD_HEIGHT_MM . 'mm;page-break-after:always;overflow:hidden}'
-            . '.page:last-child{page-break-after:auto}'
-            . 'img{display:block;width:' . self::CARD_WIDTH_MM . 'mm;height:' . self::CARD_HEIGHT_MM . 'mm}'
-            . '</style></head><body>'
-            . '<div class="page"><img src="file:///' . str_replace('\\', '/', $frontImagePath) . '"></div>'
-            . '<div class="page"><img src="file:///' . str_replace('\\', '/', $backImagePath) . '"></div>'
-            . '</body></html>';
-        file_put_contents($pdfHtmlPath, $pdfDocument);
-
-        $pdfCommand = escapeshellarg($chromePath)
-            . ' --headless=new --disable-gpu --no-sandbox --allow-file-access-from-files'
-            . ' --no-pdf-header-footer --user-data-dir=' . escapeshellarg($profilePath . '_pdf')
-            . ' --print-to-pdf=' . escapeshellarg($pdfPath)
-            . ' ' . escapeshellarg($pdfHtmlPath);
-        exec($pdfCommand, $pdfOutput, $pdfExitCode);
-        $this->removeTemporaryPath($pdfHtmlPath);
-        $this->removeTemporaryPath($profilePath . '_pdf');
-
-        $this->removeTemporaryPath($frontImagePath);
-        $this->removeTemporaryPath($backImagePath);
-
-        if ($pdfExitCode !== 0 || !is_file($pdfPath)) {
-            throw new RuntimeException('Could not create the snapshot PDF.');
-        }
-
-        return $pdfPath;
-    }
-
-    private function captureChromeImage(string $chromePath, string $htmlPath, string $imagePath, string $profilePath): void
-    {
-        $command = escapeshellarg($chromePath)
-            . ' --headless=new --disable-gpu --no-sandbox --allow-file-access-from-files'
-            . ' --hide-scrollbars --force-device-scale-factor=' . self::PNG_SCALE . ' --window-size=' . self::CARD_WIDTH . ',' . self::CARD_HEIGHT . ' --screenshot=' . escapeshellarg($imagePath)
-            . ' --user-data-dir=' . escapeshellarg($profilePath)
-            . ' ' . escapeshellarg($htmlPath);
-
-        exec($command, $output, $exitCode);
-        $this->removeTemporaryPath($profilePath);
-
-        if ($exitCode !== 0 || !is_file($imagePath)) {
-            throw new RuntimeException('Chrome could not render the card snapshot.');
-        }
-
-        $dimensions = @getimagesize($imagePath);
-        $expectedWidth = self::CARD_WIDTH * self::PNG_SCALE;
-        $expectedHeight = self::CARD_HEIGHT * self::PNG_SCALE;
-        if ($dimensions === false || $dimensions[0] !== $expectedWidth || $dimensions[1] !== $expectedHeight) {
-            $actual = $dimensions === false ? 'unknown dimensions' : $dimensions[0] . 'x' . $dimensions[1];
-            throw new RuntimeException(
-                'Chrome rendered the PNG at ' . $actual . '; expected ' . $expectedWidth . 'x' . $expectedHeight . '.'
-            );
-        }
-    }
-
-    private function wrapBrowserSnapshotHtml(string $html): string
-    {
-        $width = self::CARD_WIDTH;
-        $height = self::CARD_HEIGHT;
-
-        return '<!DOCTYPE html><html><head><meta charset="utf-8"><style>'
-            . 'html,body{margin:0;padding:0;width:' . $width . 'px;height:' . $height . 'px;overflow:hidden;background:#fff}'
-            . 'body{display:block}'
-            . '.ndc-id-card-wrapper{width:' . $width . 'px !important;height:' . $height . 'px !important;min-width:' . $width . 'px !important;min-height:' . $height . 'px !important;max-width:' . $width . 'px !important;max-height:' . $height . 'px !important;aspect-ratio:' . $width . '/' . $height . ' !important;box-shadow:none !important;display:block !important}'
-            . '.ndc-id-card-wrapper>*{box-sizing:border-box}'
-            . '</style></head><body>' . $html . '</body></html>';
-    }
-
-    private function removeTemporaryPath(string $path): void
-    {
-        if (is_file($path)) {
-            @unlink($path);
-            return;
-        }
-
-        if (is_dir($path)) {
-            foreach (scandir($path) ?: [] as $entry) {
-                if ($entry !== '.' && $entry !== '..') {
-                    $this->removeTemporaryPath($path . DIRECTORY_SEPARATOR . $entry);
-                }
-            }
-            @rmdir($path);
-        }
-    }
-
-    /**
-     * Wrap card HTML with proper styling for PDF rendering
-     *
-     * @param string $html The card HTML
-     * @return string The wrapped HTML
-     */
-    private function wrapCardHtml(string $html): string
-    {
-        $width = self::CARD_WIDTH;
-        $height = self::CARD_HEIGHT;
-        $widthMm = self::CARD_WIDTH_MM;
-        $heightMm = self::CARD_HEIGHT_MM;
-
-        return <<<HTML
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="utf-8">
-    <style>
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-        body {
-            margin: 0;
-            padding: 0;
-            background: none;
-            font-family: Arial, sans-serif;
-        }
-        html, body {
-            width: {$widthMm}mm;
-            height: {$heightMm}mm;
-            overflow: hidden;
-            page-break-after: avoid;
-            page-break-before: avoid;
-        }
-        .card-container {
-            width: {$width}px;
-            height: {$height}px;
-            overflow: hidden;
-            position: relative;
-            page-break-inside: avoid;
-        }
-        .ndc-id-card-wrapper {
-            width: {$width}px !important;
-            height: {$height}px !important;
-            min-width: {$width}px !important;
-            min-height: {$height}px !important;
-            max-width: {$width}px !important;
-            max-height: {$height}px !important;
-            aspect-ratio: {$width} / {$height} !important;
-            border: 0 !important;
-            border-radius: 0 !important;
-            box-shadow: none !important;
-            display: block !important;
-            page-break-inside: avoid;
-            page-break-after: avoid;
-        }
-        @media print {
-            body, html {
-                margin: 0 !important;
-                padding: 0 !important;
-                page-break-after: avoid;
-            }
-        }
-    </style>
-</head>
-<body>
-    <div class="card-container">
-        $html
-    </div>
-</body>
-</html>
-HTML;
-    }
-
-    private function writeHtmlInChunks(Mpdf $mpdf, string $html): void
-    {
-        $parts = explode('>', $html);
-        $chunk = '';
-
-        foreach ($parts as $part) {
-            $chunk .= $part . '>';
-            if (strlen($chunk) >= 200000) {
-                $mpdf->WriteHTML($chunk);
-                $chunk = '';
-            }
-        }
-
-        if ($chunk !== '') {
-            $mpdf->WriteHTML($chunk);
-        }
-    }
-
-    /**
-     * Export a single side card as PDF (front only or back only)
-     *
-     * @param string $html The card HTML
-     * @param string $studentNumber For filename reference
-     * @param string $side 'front' or 'back' for file naming
-     * @return string Path to the generated PDF file
-     */
-    public function exportCardSidePdf(
-        string $html,
-        string $studentNumber,
-        string $side = 'front'
-    ): string {
-        if (!class_exists('Mpdf\Mpdf')) {
-            throw new RuntimeException(
-                'mPDF library not installed. Run: composer require mpdf/mpdf'
-            );
-        }
-
-        ini_set('pcre.backtrack_limit', '10000000');
-
-        $mpdf = new Mpdf([
-            'format' => [self::CARD_WIDTH_MM, self::CARD_HEIGHT_MM],
-            'margin_left' => 0,
-            'margin_right' => 0,
-            'margin_top' => 0,
-            'margin_bottom' => 0,
-            'margin_header' => 0,
-            'margin_footer' => 0,
-            'mode' => 'utf-8',
-            'dpi' => self::CARD_DPI,
-            'tempDir' => sys_get_temp_dir(),
-        ]);
-        $mpdf->SetAutoPageBreak(false, 0);
-
-        $this->writeHtmlInChunks($mpdf, $this->wrapCardHtml($html));
-
-        $sanitizedNumber = preg_replace('/[^a-zA-Z0-9_-]/', '_', $studentNumber);
-        $filename = 'card_' . ($sanitizedNumber ?: 'export') . '_' . $side . '_' . time() . '.pdf';
-
-        $outputPath = sys_get_temp_dir() . DIRECTORY_SEPARATOR . $filename;
-
-        try {
-            $mpdf->Output($outputPath, 'F');
-        } catch (\Throwable $exception) {
-            throw new RuntimeException(
-                'Failed to generate PDF: ' . $exception->getMessage(),
-                0,
-                $exception
-            );
-        }
-
-        if (!file_exists($outputPath)) {
-            throw new RuntimeException('PDF file was not created successfully');
-        }
-
-        return $outputPath;
-    }
-
-    /**
-     * Clean up temporary PDF files (call after download)
-     *
-     * @param string $filePath Path to the file to delete
-     * @return bool True if deleted successfully
-     */
     public static function cleanupFile(string $filePath): bool
     {
-        if (is_file($filePath)) {
-            return @unlink($filePath);
-        }
-        return false;
+        return is_file($filePath) && @unlink($filePath);
     }
 }

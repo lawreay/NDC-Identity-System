@@ -2,8 +2,10 @@
 require_once __DIR__ . '/../app/Database.php';
 require_once __DIR__ . '/../app/StudentRepository.php';
 require_once __DIR__ . '/../app/Auth.php';
+require_once __DIR__ . '/../app/Services/ImageUploadService.php';
 
 use App\Auth;
+use App\Services\ImageUploadService;
 
 Auth::requireLogin();
 
@@ -33,53 +35,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $id > 0) {
     $hasSelectedFile = is_array($file) && !empty($file['name']) && (($file['size'] ?? 0) > 0) && $uploadMessage === '';
 
     if ($hasSelectedFile) {
-        $allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'];
-        $extension = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
-        $allowedExtensions = ['png', 'jpg', 'jpeg', 'webp'];
-        $mimeType = strtolower($file['type'] ?? '');
-        $isAccepted = in_array($mimeType, $allowedTypes, true) && in_array($extension, $allowedExtensions, true);
-        
-        // Check file size (5 MB limit)
-        $maxFileSize = 5 * 1024 * 1024;
-        $fileTooLarge = (int) ($file['size'] ?? 0) > $maxFileSize;
+        $fileTooLarge = (int) ($file['size'] ?? 0) > 5 * 1024 * 1024;
 
         if ($fileTooLarge) {
             $uploadMessage = 'File size must not exceed 5 MB.';
-            $uploadType = 'danger';
-        } elseif (!$isAccepted) {
-            $uploadMessage = 'Only PNG, JPG, JPEG, and WebP images are allowed.';
             $uploadType = 'danger';
         } elseif (($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
             $uploadMessage = 'The upload failed. Please try again.';
             $uploadType = 'danger';
         } else {
-            $tmpPath = $file['tmp_name'] ?? '';
-            $filename = 'student_' . $id . '_' . time() . '.' . strtolower($extension);
-            $destinationDir = __DIR__ . '/uploads/student_photos';
-            $destination = $destinationDir . '/' . $filename;
-
-            if (!is_dir($destinationDir)) {
-                mkdir($destinationDir, 0777, true);
-            }
-
-            $saved = false;
-            if (is_string($tmpPath) && $tmpPath !== '' && file_exists($tmpPath)) {
-                if (is_uploaded_file($tmpPath)) {
-                    $saved = move_uploaded_file($tmpPath, $destination);
-                } else {
-                    $saved = copy($tmpPath, $destination);
-                }
-            }
-
-            if (!$saved) {
-                $uploadMessage = 'The file could not be saved.';
-                $uploadType = 'danger';
-            } else {
-                $relativePath = 'uploads/student_photos/' . $filename;
+            try {
+                $relativePath = (new ImageUploadService())->storeStudentPhoto($file, __DIR__ . '/uploads/student_photos', $id);
                 $repository->updatePhoto($id, $relativePath);
                 $uploadMessage = 'Photo uploaded successfully.';
                 $uploadType = 'success';
                 $student = $repository->findById($id);
+            } catch (Throwable $exception) {
+                $uploadMessage = $exception->getMessage();
+                $uploadType = 'danger';
             }
         }
     } else {
@@ -92,6 +65,12 @@ $photoPath = $student['photo_path'] ?? '';
 $hasPhoto = is_string($photoPath) && trim($photoPath) !== '';
 $photoUrl = $hasPhoto ? '/' . ltrim($photoPath, '/') : '';
 $fullName = trim(((string) ($student['first_name'] ?? '')) . ' ' . ((string) ($student['last_name'] ?? '')));
+$notice = '';
+if (isset($_GET['created'])) {
+    $notice = 'Student created successfully.';
+} elseif (isset($_GET['updated'])) {
+    $notice = 'Student profile updated successfully.';
+}
 
 ?><!DOCTYPE html>
 <html lang="en">
@@ -102,26 +81,34 @@ $fullName = trim(((string) ($student['first_name'] ?? '')) . ' ' . ((string) ($s
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
 <body class="bg-light">
+<?php require_once __DIR__ . '/partials/header.php'; ?>
     <div class="container py-4">
         <div class="d-flex justify-content-between align-items-center mb-4">
             <a href="students.php" class="btn btn-outline-secondary btn-sm">← Back to students</a>
             
             <?php if ($student && $student !== null): ?>
                 <div class="btn-group" role="group">
+                    <a href="student-form.php?id=<?= (int) ($student['id'] ?? 0) ?>" class="btn btn-outline-secondary btn-sm">
+                        Edit Profile
+                    </a>
                     <a href="student-id-card.php?id=<?= (int) ($student['id'] ?? 0) ?>" class="btn btn-outline-primary btn-sm">
-                        👁️ Preview Card
+                        Preview Card
                     </a>
                     
-                    <form method="post" action="export-card.php" style="display:inline;">
+                    <form method="post" action="export-card.php" class="js-export-form" style="display:inline;">
                         <input type="hidden" name="student_id" value="<?= (int) ($student['id'] ?? 0) ?>">
                         <input type="hidden" name="_csrf" value="<?= htmlspecialchars(Auth::csrfToken(), ENT_QUOTES, 'UTF-8') ?>">
-                        <button type="submit" class="btn btn-primary btn-sm" title="Export student ID card as PDF">
-                            📥 Export PDF
+                        <button type="submit" class="btn btn-primary btn-sm js-export-button" title="Export student ID card as PDF">
+                            Export PDF
                         </button>
                     </form>
                 </div>
             <?php endif; ?>
         </div>
+
+        <?php if ($notice !== ''): ?>
+            <div class="alert alert-success"><?= htmlspecialchars($notice, ENT_QUOTES, 'UTF-8') ?></div>
+        <?php endif; ?>
 
         <?php if ($errorMessage): ?>
             <div class="alert alert-danger"><?= htmlspecialchars($errorMessage, ENT_QUOTES, 'UTF-8') ?></div>
@@ -140,7 +127,7 @@ $fullName = trim(((string) ($student['first_name'] ?? '')) . ' ' . ((string) ($s
                                 <img src="<?= htmlspecialchars($photoUrl, ENT_QUOTES, 'UTF-8') ?>" alt="Student photo" class="img-fluid rounded border" style="max-height: 320px; object-fit: cover; width: 100%;">
                             <?php else: ?>
                                 <div class="border rounded d-flex flex-column justify-content-center align-items-center text-center p-4 bg-light" style="min-height: 280px;">
-                                    <div class="display-6 text-muted mb-2">📷</div>
+                                    <div class="display-6 text-muted mb-2"></div>
                                     <h5 class="mb-2">No photo available</h5>
                                     <p class="text-muted mb-0">Upload a photo to add one here.</p>
                                 </div>
@@ -213,5 +200,18 @@ $fullName = trim(((string) ($student['first_name'] ?? '')) . ' ' . ((string) ($s
             </div>
         <?php endif; ?>
     </div>
+<script>
+    document.querySelectorAll('.js-export-form').forEach(form => {
+        form.addEventListener('submit', () => {
+            const button = form.querySelector('.js-export-button');
+            if (!button) {
+                return;
+            }
+
+            button.disabled = true;
+            button.innerHTML = '<span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span><span>Preparing...</span>';
+        });
+    });
+</script>
 </body>
 </html>

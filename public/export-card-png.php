@@ -73,9 +73,11 @@ try {
         'accent_color' => '#f4b400',
     ];
 
-    $cardHtml = $service->renderTemplate($template, $student, $organization, $theme, $side);
     $pngPath = (new CardExportService())->exportCardPng(
-        $cardHtml,
+        $template,
+        $student,
+        $organization,
+        $theme,
         (string) $student['student_number'],
         $side
     );
