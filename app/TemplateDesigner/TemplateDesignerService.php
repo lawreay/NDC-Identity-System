@@ -738,12 +738,17 @@ HTML;
         if (function_exists('imagecreatefromstring') && function_exists('imagepng')) {
             $image = @imagecreatefromstring($contents);
             if ($image !== false) {
-                $canvas = imagecreatetruecolor(imagesx($image), imagesy($image));
+                $sourceWidth = imagesx($image);
+                $sourceHeight = imagesy($image);
+                $scale = min(856 / max(1, $sourceWidth), 540 / max(1, $sourceHeight), 1);
+                $targetWidth = max(1, (int) round($sourceWidth * $scale));
+                $targetHeight = max(1, (int) round($sourceHeight * $scale));
+                $canvas = imagecreatetruecolor($targetWidth, $targetHeight);
                 if ($canvas !== false) {
                     $white = imagecolorallocate($canvas, 255, 255, 255);
                     imagefill($canvas, 0, 0, $white);
                     imagealphablending($canvas, true);
-                    imagecopy($canvas, $image, 0, 0, 0, 0, imagesx($image), imagesy($image));
+                    imagecopyresampled($canvas, $image, 0, 0, 0, 0, $targetWidth, $targetHeight, $sourceWidth, $sourceHeight);
                     ob_start();
                     $written = imagepng($canvas, null, 6);
                     $pngContents = ob_get_clean();

@@ -98,8 +98,11 @@ try {
     echo 'PNG export failed: ' . htmlspecialchars($exception->getMessage(), ENT_QUOTES, 'UTF-8');
     exit;
 } catch (Throwable $exception) {
-    error_log('Card PNG export error: ' . $exception->getMessage());
+    error_log('Card PNG export error: ' . $exception->getMessage() . ' in ' . $exception->getFile() . ':' . $exception->getLine() . PHP_EOL . $exception->getTraceAsString());
     http_response_code(500);
-    echo 'An unexpected error occurred while exporting the PNG.';
+    $debug = filter_var(getenv('APP_DEBUG') ?: false, FILTER_VALIDATE_BOOLEAN);
+    echo $debug
+        ? 'PNG export error: ' . htmlspecialchars($exception->getMessage(), ENT_QUOTES, 'UTF-8')
+        : 'An unexpected error occurred while exporting the PNG.';
     exit;
 }

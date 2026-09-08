@@ -122,9 +122,10 @@ try {
 } catch (Throwable $exception) {
     // Handle unexpected exceptions
     http_response_code(500);
-    echo 'An unexpected error occurred. Please try again.';
-    
-    // Log error for debugging
-    error_log('Card export error: ' . $exception->getMessage());
+    error_log('Card export error: ' . $exception->getMessage() . ' in ' . $exception->getFile() . ':' . $exception->getLine() . PHP_EOL . $exception->getTraceAsString());
+    $debug = filter_var(getenv('APP_DEBUG') ?: false, FILTER_VALIDATE_BOOLEAN);
+    echo $debug
+        ? 'Export error: ' . htmlspecialchars($exception->getMessage(), ENT_QUOTES, 'UTF-8')
+        : 'An unexpected error occurred. Please try again.';
     exit;
 }
