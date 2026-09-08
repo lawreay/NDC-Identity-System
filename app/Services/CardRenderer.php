@@ -258,6 +258,15 @@ final class CardRenderer
      */
     private function palette(array $template, array $theme): array
     {
+        if ((string) ($template['id'] ?? '') === 'template_8') {
+            return [
+                'navy' => self::NAVY,
+                'yellow' => self::YELLOW,
+                'ink' => self::INK,
+                'muted' => self::MUTED,
+            ];
+        }
+
         $html = (string) ($template['front_html'] ?? '') . (string) ($template['back_html'] ?? '');
         preg_match_all('/#[0-9a-f]{6}/i', $html, $matches);
         $colors = array_values(array_unique(array_map('strtolower', $matches[0] ?? [])));

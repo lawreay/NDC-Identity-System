@@ -5,6 +5,8 @@ namespace App\Services;
 use Mpdf\Mpdf;
 use RuntimeException;
 
+require_once dirname(__DIR__, 2) . '/app/TemplateDesigner/TemplateDesignerService.php';
+
 final class CardExportService
 {
     public function __construct(private ?CardRenderer $renderer = null)
@@ -35,15 +37,16 @@ final class CardExportService
             throw new RuntimeException('PDF export requires the mPDF library. Run: composer install');
         }
 
-        $frontSvg = $this->renderer->renderFront($template, $student, $organization, $theme);
-        $backSvg = $this->renderer->renderBack($template, $student, $organization, $theme);
+        $designer = new \TemplateDesignerService();
+        $frontHtml = $designer->renderTemplateForExport($template, $student, $organization, $theme, 'front');
+        $backHtml = $designer->renderTemplateForExport($template, $student, $organization, $theme, 'back');
         $mpdf = $this->newMpdf($studentNumber);
         ini_set('pcre.backtrack_limit', '10000000');
 
         try {
-            $mpdf->WriteHTML($frontSvg);
+            $mpdf->WriteHTML($frontHtml);
             $mpdf->AddPage();
-            $mpdf->WriteHTML($backSvg);
+            $mpdf->WriteHTML($backHtml);
         } catch (\Throwable $exception) {
             throw new RuntimeException('Failed to generate PDF: ' . $exception->getMessage(), 0, $exception);
         }

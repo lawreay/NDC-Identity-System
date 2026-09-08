@@ -377,6 +377,26 @@ final class TemplateDesignerService
         return $this->wrapCardHtml($payload);
     }
 
+    public function renderTemplateForExport(array $template, array $student, array $organization = [], array $theme = [], string $side = 'front'): string
+    {
+        $html = $this->renderTemplate($template, $student, $organization, $theme, $side);
+
+        return preg_replace_callback('/(src|href)=("|\')([^"\']+)("|\')/i', function (array $matches): string {
+            $path = html_entity_decode($matches[3], ENT_QUOTES, 'UTF-8');
+            if (preg_match('~^(data:|https?://|#)~i', $path) === 1) {
+                return $matches[0];
+            }
+
+            $resolvedPath = $this->imagePath($path);
+            $dataUri = $resolvedPath !== null ? $this->imageDataUri($resolvedPath) : null;
+            if ($dataUri === null) {
+                return $matches[0];
+            }
+
+            return $matches[1] . '=' . $matches[2] . htmlspecialchars($dataUri, ENT_QUOTES, 'UTF-8') . $matches[4];
+        }, $html) ?? $html;
+    }
+
     private function wrapCardHtml(string $html): string
     {
         $width = self::CARD_WIDTH;
