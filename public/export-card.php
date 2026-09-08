@@ -80,12 +80,8 @@ try {
         'authorized_signature_path' => $appSettings['principal_signature_path'] ?? $appSettings['authorized_signature_path'] ?? '',
     ];
 
-    // Theme colors
-    $theme = [
-        'primary_color' => '#0b5ed7',
-        'secondary_color' => '#0a7e8c',
-        'accent_color' => '#f4b400',
-    ];
+    // Use the same configured theme as the card preview.
+    $theme = SettingsRepository::themeFromSettings($appSettings);
 
     // Export the selected card data through the deterministic fixed-size renderer.
     $exportService = new CardExportService();

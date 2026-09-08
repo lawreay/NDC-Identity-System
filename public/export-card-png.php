@@ -67,11 +67,7 @@ try {
         'authorized_name' => $appSettings['principal_signature_name'] ?? $appSettings['authorized_name'] ?? 'Authorized Officer',
         'authorized_signature_path' => $appSettings['principal_signature_path'] ?? $appSettings['authorized_signature_path'] ?? '',
     ];
-    $theme = [
-        'primary_color' => '#0b5ed7',
-        'secondary_color' => '#0a7e8c',
-        'accent_color' => '#f4b400',
-    ];
+    $theme = SettingsRepository::themeFromSettings($appSettings);
 
     $pngPath = (new CardExportService())->exportCardPng(
         $template,

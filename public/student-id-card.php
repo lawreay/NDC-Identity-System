@@ -3,15 +3,18 @@ require_once __DIR__ . '/../app/Database.php';
 require_once __DIR__ . '/../app/StudentRepository.php';
 require_once __DIR__ . '/../app/SettingsRepository.php';
 require_once __DIR__ . '/../app/TemplateDesigner/TemplateDesignerService.php';
+require_once __DIR__ . '/../app/Services/CardRenderer.php';
 require_once __DIR__ . '/../app/Auth.php';
 
 use App\Auth;
+use App\Services\CardRenderer;
 
 Auth::requireLogin();
 
 $id = isset($_GET['id']) ? (int) $_GET['id'] : 0;
 
 $service = new TemplateDesignerService();
+$cardRenderer = new CardRenderer();
 $repository = new StudentRepository(Database::getConnection());
 $settingsRepository = new SettingsRepository(Database::getConnection());
 
@@ -71,13 +74,9 @@ try {
             'authorized_name' => $appSettings['principal_signature_name'] ?? $appSettings['authorized_name'] ?? 'Authorized Officer',
             'authorized_signature_path' => $appSettings['principal_signature_path'] ?? $appSettings['authorized_signature_path'] ?? '',
         ];
-        $theme = [
-            'primary_color' => '#0b5ed7',
-            'secondary_color' => '#0a7e8c',
-            'accent_color' => '#f4b400',
-        ];
-        $frontPreview = $service->renderTemplate($selectedTemplate, $student, $organization, $theme, 'front');
-        $backPreview = $service->renderTemplate($selectedTemplate, $student, $organization, $theme, 'back');
+        $theme = SettingsRepository::themeFromSettings($appSettings);
+        $frontPreview = $cardRenderer->renderFront($selectedTemplate, $student, $organization, $theme);
+        $backPreview = $cardRenderer->renderBack($selectedTemplate, $student, $organization, $theme);
     }
 } catch (Throwable $exception) {
     $student = null;
@@ -106,6 +105,7 @@ function escape(string $value): string
         .preview-card-shell { width:856px; height:540px; margin:0 auto; }
         .preview-frame .ndc-id-card-wrapper { box-shadow: 0 10px 30px rgba(0,0,0,0.08); width:856px !important; height:540px !important; min-width:856px !important; min-height:540px !important; max-width:856px !important; max-height:540px !important; aspect-ratio:856/540 !important; display:block !important; }
         .preview-frame .ndc-id-card-wrapper > * { box-sizing:border-box; }
+        .preview-card-shell > svg { width:856px; height:540px; display:block; }
         .template-selector { min-width: 220px; }
         .preview-loading { position:absolute; inset:0; z-index:5; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:0.75rem; background:rgba(255,255,255,0.88); color:#495057; transition:opacity 0.2s ease; }
         .preview-frame.is-loaded .preview-loading { opacity:0; pointer-events:none; }
@@ -159,7 +159,7 @@ function escape(string $value): string
                         </select>
                         <button type="submit" class="btn btn-primary">Apply</button>
                         <?php if ($selectedTemplate !== null): ?>
-                            <span class="badge bg-secondary">Preview only</span>
+                            <span class="badge bg-secondary">Export-ready</span>
                         <?php endif; ?>
                     </form>
                 </div>

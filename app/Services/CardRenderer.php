@@ -9,7 +9,7 @@ use RuntimeException;
 
 /**
  * Renders the physical card with fixed SVG/GD coordinates.
- * The HTML template remains the browser preview format; exports do not execute it.
+ * The student card preview and PHP exports use this same renderer.
  */
 final class CardRenderer
 {
@@ -248,9 +248,8 @@ final class CardRenderer
     }
 
     /**
-     * The default Minimal Ribbon card is reproduced with fixed coordinates. Other
-     * templates retain their selection and palette while using this deterministic
-     * physical-card export profile instead of executing arbitrary HTML/CSS.
+     * Templates retain their selection and palette while using this deterministic
+     * physical-card profile. Arbitrary browser CSS is intentionally not executed.
      *
      * @param array<string, mixed> $template
      * @param array<string, mixed> $theme
@@ -258,44 +257,18 @@ final class CardRenderer
      */
     private function palette(array $template, array $theme): array
     {
-        if ((string) ($template['id'] ?? '') === 'template_8') {
-            return [
-                'navy' => self::NAVY,
-                'yellow' => self::YELLOW,
-                'ink' => self::INK,
-                'muted' => self::MUTED,
-            ];
-        }
-
-        $html = (string) ($template['front_html'] ?? '') . (string) ($template['back_html'] ?? '');
-        preg_match_all('/#[0-9a-f]{6}/i', $html, $matches);
-        $colors = array_values(array_unique(array_map('strtolower', $matches[0] ?? [])));
-        $dark = self::NAVY;
-        $accent = (string) ($theme['accent_color'] ?? self::YELLOW);
-
-        foreach ($colors as $color) {
-            [$red, $green, $blue] = $this->rgb($color);
-            $luminance = (0.299 * $red) + (0.587 * $green) + (0.114 * $blue);
-            if ($luminance < 95) {
-                $dark = $color;
-                break;
-            }
-        }
-
-        foreach ($colors as $color) {
-            [$red, $green, $blue] = $this->rgb($color);
-            if ($red > 160 && $green > 120 && $blue < 140) {
-                $accent = $color;
-                break;
-            }
-        }
-
         return [
-            'navy' => $dark,
-            'yellow' => $accent,
-            'ink' => self::INK,
-            'muted' => self::MUTED,
+            'navy' => $this->themeColor($theme['primary_color'] ?? null, self::NAVY),
+            'yellow' => $this->themeColor($theme['accent_color'] ?? null, self::YELLOW),
+            'ink' => $this->themeColor($theme['secondary_color'] ?? null, self::INK),
+            'muted' => $this->themeColor($theme['secondary_color'] ?? null, self::MUTED),
         ];
+    }
+
+    private function themeColor(mixed $value, string $fallback): string
+    {
+        $value = strtoupper(trim((string) $value));
+        return preg_match('/^#[0-9A-F]{6}$/', $value) === 1 ? $value : $fallback;
     }
 
     /** @param array<string, mixed> $data */
