@@ -35,7 +35,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'campus_name' => trim((string) ($_POST['campus_name'] ?? '')),
         'school_name' => trim((string) ($_POST['school_name'] ?? '')),
         'academic_programs' => trim((string) ($_POST['academic_programs'] ?? '')),
+        'primary_color' => trim((string) ($_POST['primary_color'] ?? '')),
+        'secondary_color' => trim((string) ($_POST['secondary_color'] ?? '')),
+        'accent_color' => trim((string) ($_POST['accent_color'] ?? '')),
     ];
+    $input = array_merge($input, SettingsRepository::themeFromSettings($input));
 
     $newPassword = trim((string) ($_POST['new_password'] ?? ''));
     $confirmPassword = trim((string) ($_POST['confirm_password'] ?? ''));
@@ -115,6 +119,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 }
+
+$theme = SettingsRepository::themeFromSettings($settings);
 
 function escape(string $value): string
 {
@@ -223,6 +229,22 @@ $isAdministrator = ($currentUser['role'] ?? '') === 'Administrator';
                 <label class="form-label">Academic Programs</label>
                 <textarea name="academic_programs" class="form-control" rows="4" placeholder="Enter one program per line"><?= escape($settings['academic_programs'] ?? '') ?></textarea>
                 <div class="form-text">These programs appear as options when adding or editing students.</div>
+            </div>
+            <div class="col-12">
+                <h2 class="h5 mb-1">Card Theme</h2>
+                <p class="text-muted mb-0">These colors are used by the card preview and PDF/PNG exports.</p>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label" for="primaryColor">Primary Color</label>
+                <input id="primaryColor" type="color" name="primary_color" class="form-control form-control-color" value="<?= escape($theme['primary_color']) ?>" title="Choose the primary card color">
+            </div>
+            <div class="col-md-4">
+                <label class="form-label" for="secondaryColor">Secondary Color</label>
+                <input id="secondaryColor" type="color" name="secondary_color" class="form-control form-control-color" value="<?= escape($theme['secondary_color']) ?>" title="Choose the secondary card color">
+            </div>
+            <div class="col-md-4">
+                <label class="form-label" for="accentColor">Accent Color</label>
+                <input id="accentColor" type="color" name="accent_color" class="form-control form-control-color" value="<?= escape($theme['accent_color']) ?>" title="Choose the accent card color">
             </div>
             <div class="col-md-6">
                 <label class="form-label">Authorized Signatory Name</label>

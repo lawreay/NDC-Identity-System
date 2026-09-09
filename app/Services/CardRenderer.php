@@ -248,8 +248,8 @@ final class CardRenderer
     }
 
     /**
-     * Templates retain their selection and palette while using this deterministic
-     * physical-card profile. Arbitrary browser CSS is intentionally not executed.
+     * Templates retain their selection while the configured theme supplies the
+     * deterministic physical-card palette. Arbitrary browser CSS is not executed.
      *
      * @param array<string, mixed> $template
      * @param array<string, mixed> $theme
