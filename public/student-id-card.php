@@ -3,24 +3,22 @@ require_once __DIR__ . '/../app/Database.php';
 require_once __DIR__ . '/../app/StudentRepository.php';
 require_once __DIR__ . '/../app/SettingsRepository.php';
 require_once __DIR__ . '/../app/TemplateDesigner/TemplateDesignerService.php';
-require_once __DIR__ . '/../app/Services/CardRenderer.php';
 require_once __DIR__ . '/../app/Auth.php';
 
 use App\Auth;
-use App\Services\CardRenderer;
 
 Auth::requireLogin();
 
 $id = isset($_GET['id']) ? (int) $_GET['id'] : 0;
 
 $service = new TemplateDesignerService();
-$cardRenderer = new CardRenderer();
 $repository = new StudentRepository(Database::getConnection());
 $settingsRepository = new SettingsRepository(Database::getConnection());
 
 $message = '';
 $messageType = 'success';
 $templateId = trim((string) ($_GET['template'] ?? ''));
+$downloadFileStem = 'student-id-card';
 
 try {
     $student = $repository->findById($id);
@@ -75,8 +73,10 @@ try {
             'authorized_signature_path' => $appSettings['principal_signature_path'] ?? $appSettings['authorized_signature_path'] ?? '',
         ];
         $theme = SettingsRepository::themeFromSettings($appSettings);
-        $frontPreview = $cardRenderer->renderFront($selectedTemplate, $student, $organization, $theme);
-        $backPreview = $cardRenderer->renderBack($selectedTemplate, $student, $organization, $theme);
+        $frontPreview = $service->renderTemplate($selectedTemplate, $student, $organization, $theme, 'front');
+        $backPreview = $service->renderTemplate($selectedTemplate, $student, $organization, $theme, 'back');
+        $safeStudentNumber = preg_replace('/[^a-zA-Z0-9_-]/', '_', (string) ($student['student_number'] ?? '')) ?: 'student-id-card';
+        $downloadFileStem = 'card_' . $safeStudentNumber;
     }
 } catch (Throwable $exception) {
     $student = null;
@@ -121,7 +121,7 @@ function escape(string $value): string
         </div>
         <div class="d-flex gap-2">
             <?php if ($selectedTemplate !== null): ?>
-                <form method="post" action="export-card.php" class="js-export-form">
+                <form method="post" action="export-card.php" class="js-export-form" data-export-format="pdf" data-export-file-stem="<?= escape($downloadFileStem) ?>">
                     <input type="hidden" name="student_id" value="<?= $id ?>">
                     <input type="hidden" name="template_id" value="<?= escape($templateId) ?>">
                     <input type="hidden" name="_csrf" value="<?= escape(Auth::csrfToken()) ?>">
@@ -175,7 +175,7 @@ function escape(string $value): string
                         <div class="card-body">
                             <div class="d-flex justify-content-between align-items-center mb-3">
                                 <h2 class="h6 mb-0">Front</h2>
-                                <form method="post" action="export-card-png.php" class="js-export-form">
+                                <form method="post" action="export-card-png.php" class="js-export-form" data-export-format="png" data-card-side="front" data-export-file-stem="<?= escape($downloadFileStem) ?>">
                                     <input type="hidden" name="student_id" value="<?= $id ?>">
                                     <input type="hidden" name="template_id" value="<?= escape($templateId) ?>">
                                     <input type="hidden" name="side" value="front">
@@ -183,7 +183,7 @@ function escape(string $value): string
                                     <button type="submit" class="btn btn-outline-primary btn-sm js-export-button">Export PNG</button>
                                 </form>
                             </div>
-                            <div class="preview-frame" data-card-preview>
+                            <div class="preview-frame" data-card-preview data-card-side="front">
                                 <div class="preview-loading" aria-live="polite">
                                     <span class="spinner-border text-primary" aria-hidden="true"></span>
                                     <span>Loading ID card...</span>
@@ -198,7 +198,7 @@ function escape(string $value): string
                         <div class="card-body">
                             <div class="d-flex justify-content-between align-items-center mb-3">
                                 <h2 class="h6 mb-0">Back</h2>
-                                <form method="post" action="export-card-png.php" class="js-export-form">
+                                <form method="post" action="export-card-png.php" class="js-export-form" data-export-format="png" data-card-side="back" data-export-file-stem="<?= escape($downloadFileStem) ?>">
                                     <input type="hidden" name="student_id" value="<?= $id ?>">
                                     <input type="hidden" name="template_id" value="<?= escape($templateId) ?>">
                                     <input type="hidden" name="side" value="back">
@@ -206,7 +206,7 @@ function escape(string $value): string
                                     <button type="submit" class="btn btn-outline-primary btn-sm js-export-button">Export PNG</button>
                                 </form>
                             </div>
-                            <div class="preview-frame" data-card-preview>
+                            <div class="preview-frame" data-card-preview data-card-side="back">
                                 <div class="preview-loading" aria-live="polite">
                                     <span class="spinner-border text-primary" aria-hidden="true"></span>
                                     <span>Loading ID card...</span>
@@ -220,6 +220,8 @@ function escape(string $value): string
         <?php endif; ?>
     <?php endif; ?>
 </div>
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 <script>
     (function () {
         const cardWidth = 856;
@@ -271,15 +273,118 @@ function escape(string $value): string
             window.setTimeout(() => frame.classList.add('is-loaded'), 2500);
         });
 
+        function download(blob, filename) {
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            link.href = url;
+            link.download = filename;
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+        }
+
+        async function waitForImages(element) {
+            const images = Array.from(element.querySelectorAll('img'));
+            const imageLoad = Promise.all(images.map(image => {
+                if (image.complete) {
+                    return Promise.resolve();
+                }
+                return new Promise(resolve => {
+                    image.addEventListener('load', resolve, { once: true });
+                    image.addEventListener('error', resolve, { once: true });
+                });
+            }));
+
+            await Promise.race([
+                imageLoad,
+                new Promise(resolve => window.setTimeout(resolve, 5000)),
+            ]);
+        }
+
+        async function captureCard(side) {
+            if (typeof window.html2canvas !== 'function') {
+                throw new Error('The card export tools could not be loaded. Please check your internet connection and try again.');
+            }
+
+            const frame = document.querySelector('[data-card-preview][data-card-side="' + side + '"]');
+            const card = frame ? frame.querySelector('.preview-card-shell') : null;
+            if (!card) {
+                throw new Error('The selected card side is not available for export.');
+            }
+
+            await waitForImages(card);
+            return window.html2canvas(card, {
+                backgroundColor: '#ffffff',
+                scale: 1,
+                width: cardWidth,
+                height: cardHeight,
+                logging: false,
+                useCORS: true,
+            });
+        }
+
+        function canvasBlob(canvas) {
+            return new Promise((resolve, reject) => {
+                canvas.toBlob(blob => blob ? resolve(blob) : reject(new Error('Unable to create the card PNG.')), 'image/png');
+            });
+        }
+
+        async function exportPng(side, fileStem) {
+            const canvas = await captureCard(side);
+            download(await canvasBlob(canvas), fileStem + '_' + side + '.png');
+        }
+
+        async function exportPdf(fileStem) {
+            if (!window.jspdf || typeof window.jspdf.jsPDF !== 'function') {
+                throw new Error('The PDF export tools could not be loaded. Please check your internet connection and try again.');
+            }
+
+            const [front, back] = await Promise.all([captureCard('front'), captureCard('back')]);
+            const pdf = new window.jspdf.jsPDF({
+                orientation: 'landscape',
+                unit: 'mm',
+                format: [85.6, 53.98],
+                compress: true,
+            });
+            const width = 85.6;
+            const height = 53.98;
+            pdf.addImage(front.toDataURL('image/png'), 'PNG', 0, 0, width, height);
+            pdf.addPage([width, height], 'landscape');
+            pdf.addImage(back.toDataURL('image/png'), 'PNG', 0, 0, width, height);
+            pdf.save(fileStem + '.pdf');
+        }
+
         document.querySelectorAll('.js-export-form').forEach(form => {
-            form.addEventListener('submit', () => {
-                const button = form.querySelector('.js-export-button');
-                if (!button) {
+            form.addEventListener('submit', async event => {
+                const format = form.dataset.exportFormat;
+                if (format !== 'png' && format !== 'pdf') {
                     return;
                 }
 
-                button.disabled = true;
-                button.innerHTML = '<span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span><span>Preparing...</span>';
+                event.preventDefault();
+                const button = form.querySelector('.js-export-button');
+                const originalContents = button ? button.innerHTML : '';
+                if (button) {
+                    button.disabled = true;
+                    button.innerHTML = '<span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span><span>Preparing...</span>';
+                }
+
+                try {
+                    const fileStem = form.dataset.exportFileStem || 'student-id-card';
+                    if (format === 'png') {
+                        await exportPng(form.dataset.cardSide, fileStem);
+                    } else {
+                        await exportPdf(fileStem);
+                    }
+                } catch (error) {
+                    window.alert(error instanceof Error ? error.message : 'Unable to export this card. Please try again.');
+                } finally {
+                    if (button) {
+                        button.disabled = false;
+                        button.innerHTML = originalContents;
+                    }
+                }
             });
         });
     }());
