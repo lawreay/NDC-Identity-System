@@ -73,12 +73,14 @@ final class ImageUploadService
             throw new RuntimeException('Unable to prepare the uploaded image.');
         }
 
-        imagealphablending($canvas, false);
-        imagesavealpha($canvas, true);
         if ($transparent) {
+            imagealphablending($canvas, false);
+            imagesavealpha($canvas, true);
             $background = imagecolorallocatealpha($canvas, 255, 255, 255, 127);
         } else {
-            $background = imagecolorallocate($canvas, 245, 247, 250);
+            imagealphablending($canvas, true);
+            imagesavealpha($canvas, false);
+            $background = imagecolorallocate($canvas, 255, 255, 255);
         }
         imagefill($canvas, 0, 0, $background);
 
@@ -89,8 +91,6 @@ final class ImageUploadService
         $offsetY = (int) floor(($canvasHeight - $height) / 2);
 
         imagecopyresampled($canvas, $source, $offsetX, $offsetY, 0, 0, $width, $height, $sourceWidth, $sourceHeight);
-        imagealphablending($canvas, true);
-
         if (!is_dir($destinationDir) && !mkdir($destinationDir, 0777, true) && !is_dir($destinationDir)) {
             imagedestroy($source);
             imagedestroy($canvas);

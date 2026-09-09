@@ -79,6 +79,7 @@ if (isset($_GET['created'])) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Student Profile</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="assets/photo-upload-editor.css">
 </head>
 <body class="bg-light">
 <?php require_once __DIR__ . '/partials/header.php'; ?>
@@ -136,8 +137,26 @@ if (isset($_GET['created'])) {
                             <form method="post" enctype="multipart/form-data" class="mt-3">
                                 <input type="hidden" name="id" value="<?= (int) ($student['id'] ?? 0) ?>">
                                 <input type="hidden" name="_csrf" value="<?= htmlspecialchars(Auth::csrfToken(), ENT_QUOTES, 'UTF-8') ?>">
-                                <label class="form-label">Upload photo</label>
-                                <input type="file" name="photo" accept="image/*" class="form-control">
+                                <label class="form-label" for="profilePhoto">Upload photo</label>
+                                <input id="profilePhoto" type="file" name="photo" accept="image/png,image/jpeg,image/webp" class="form-control" data-photo-input>
+                                <div class="photo-upload-editor mt-3" data-photo-editor data-input-id="profilePhoto" hidden>
+                                    <div class="photo-upload-stage border rounded" data-photo-stage>
+                                        <img data-photo-source alt="Selected student photo">
+                                    </div>
+                                    <div class="d-flex flex-wrap align-items-center gap-2 mt-2">
+                                        <div class="btn-group btn-group-sm" role="group" aria-label="Photo framing mode">
+                                            <input id="profilePhotoCrop" class="btn-check" type="radio" name="profile_photo_mode" value="crop" data-photo-mode checked>
+                                            <label class="btn btn-outline-secondary" for="profilePhotoCrop">Crop</label>
+                                            <input id="profilePhotoFit" class="btn-check" type="radio" name="profile_photo_mode" value="fit" data-photo-mode>
+                                            <label class="btn btn-outline-secondary" for="profilePhotoFit">Fit on white</label>
+                                        </div>
+                                        <button type="button" class="btn btn-outline-secondary btn-sm" data-photo-reset>Reset</button>
+                                    </div>
+                                    <div class="d-flex align-items-center gap-2 mt-2">
+                                        <label class="small text-muted" for="profilePhotoZoom">Zoom</label>
+                                        <input id="profilePhotoZoom" class="form-range m-0" type="range" data-photo-zoom min="1" max="3" step="0.01" value="1">
+                                    </div>
+                                </div>
                                 <button type="submit" class="btn btn-primary mt-2">Save photo</button>
                             </form>
 
@@ -200,6 +219,7 @@ if (isset($_GET['created'])) {
             </div>
         <?php endif; ?>
     </div>
+<script src="assets/photo-upload-editor.js"></script>
 <script>
     document.querySelectorAll('.js-export-form').forEach(form => {
         form.addEventListener('submit', () => {

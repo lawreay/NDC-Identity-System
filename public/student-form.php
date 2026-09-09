@@ -167,6 +167,7 @@ if ($billingCategory !== '') {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= escape($title) ?></title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="assets/photo-upload-editor.css">
 </head>
 <body class="bg-light">
 <?php require_once __DIR__ . '/partials/header.php'; ?>
@@ -281,10 +282,28 @@ if ($billingCategory !== '') {
                 </div>
                 <div class="col-md-8">
                     <label class="form-label" for="photo">Photo</label>
-                    <input id="photo" type="file" name="photo" class="form-control" accept="image/png,image/jpeg,image/webp">
+                    <input id="photo" type="file" name="photo" class="form-control" accept="image/png,image/jpeg,image/webp" data-photo-input>
                     <?php if ($isEdit && !empty($student['photo_path'])): ?>
                         <div class="form-text">Leave blank to keep the current photo.</div>
                     <?php endif; ?>
+                    <div class="photo-upload-editor mt-3" data-photo-editor data-input-id="photo" hidden>
+                        <div class="photo-upload-stage border rounded" data-photo-stage>
+                            <img data-photo-source alt="Selected student photo">
+                        </div>
+                        <div class="d-flex flex-wrap align-items-center gap-2 mt-2">
+                            <div class="btn-group btn-group-sm" role="group" aria-label="Photo framing mode">
+                                <input id="studentPhotoCrop" class="btn-check" type="radio" name="student_photo_mode" value="crop" data-photo-mode checked>
+                                <label class="btn btn-outline-secondary" for="studentPhotoCrop">Crop</label>
+                                <input id="studentPhotoFit" class="btn-check" type="radio" name="student_photo_mode" value="fit" data-photo-mode>
+                                <label class="btn btn-outline-secondary" for="studentPhotoFit">Fit on white</label>
+                            </div>
+                            <button type="button" class="btn btn-outline-secondary btn-sm" data-photo-reset>Reset</button>
+                        </div>
+                        <div class="d-flex align-items-center gap-2 mt-2">
+                            <label class="small text-muted" for="studentPhotoZoom">Zoom</label>
+                            <input id="studentPhotoZoom" class="form-range m-0" type="range" data-photo-zoom min="1" max="3" step="0.01" value="1">
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -294,6 +313,7 @@ if ($billingCategory !== '') {
         </div>
     </form>
 </div>
+<script src="assets/photo-upload-editor.js"></script>
 <script>
     const qualification = document.getElementById('qualification');
     const billingCategory = document.getElementById('billing_category');

@@ -1,0 +1,33 @@
+.photo-upload-editor {
+    max-width: 300px;
+}
+
+.photo-upload-stage {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 4 / 5;
+    overflow: hidden;
+    touch-action: none;
+    cursor: grab;
+    background-color: #ffffff;
+}
+
+.photo-upload-stage.is-fit {
+    cursor: default;
+}
+
+.photo-upload-stage.is-dragging {
+    cursor: grabbing;
+}
+
+.photo-upload-stage img {
+    position: absolute;
+    display: block;
+    max-width: none;
+    user-select: none;
+    -webkit-user-drag: none;
+}
+
+.photo-upload-editor .form-range {
+    max-width: 190px;
+}
