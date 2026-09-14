@@ -2,6 +2,8 @@
 
 final class CardRepository
 {
+    private bool $schemaEnsured = false;
+
     public function __construct(private PDO $connection)
     {
     }
@@ -12,6 +14,7 @@ final class CardRepository
         if ($studentId <= 0) {
             throw new RuntimeException('A valid student is required to issue an ID card.');
         }
+        $this->ensureSchema();
 
         $statement = $this->connection->prepare(
             "SELECT id, student_id, guid, issued_at, expires_at, status, revoked_at\n             FROM student_id_cards\n             WHERE student_id = :student_id AND status = 'ACTIVE'\n             ORDER BY id DESC\n             LIMIT 1"
@@ -60,6 +63,7 @@ final class CardRepository
         if (!$this->isGuid($guid)) {
             return null;
         }
+        $this->ensureSchema();
 
         $statement = $this->connection->prepare(
             'SELECT c.id AS card_id, c.student_id, c.guid, c.issued_at, c.expires_at, c.status AS card_status, c.revoked_at,\n                    s.student_number, s.first_name, s.last_name, s.program, s.photo_path, s.status AS student_status\n             FROM student_id_cards c\n             INNER JOIN students s ON s.id = c.student_id\n             WHERE c.guid = :guid\n             LIMIT 1'
@@ -80,6 +84,7 @@ final class CardRepository
         if ($studentId <= 0) {
             return null;
         }
+        $this->ensureSchema();
 
         $statement = $this->connection->prepare(
             'SELECT id, student_id, guid, issued_at, expires_at, status, revoked_at\n             FROM student_id_cards\n             WHERE student_id = :student_id\n             ORDER BY id DESC\n             LIMIT 1'
@@ -106,6 +111,7 @@ final class CardRepository
         if (!$this->isGuid($guid) || !in_array($status, ['ACTIVE', 'REVOKED'], true)) {
             return false;
         }
+        $this->ensureSchema();
 
         $statement = $this->connection->prepare('UPDATE student_id_cards SET status = :status, revoked_at = :revoked_at WHERE guid = :guid');
         return $statement->execute([
@@ -123,6 +129,90 @@ final class CardRepository
         }
         $parsed = DateTimeImmutable::createFromFormat('!Y-m-d', $date);
         return $parsed && $parsed->format('Y-m-d') === $date ? $date : null;
+    }
+
+    /**
+     * The application has no general migration runner. Keep the table migration
+     * here so existing installations receive the verification columns as soon
+     * as a card is previewed or exported.
+     */
+    private function ensureSchema(): void
+    {
+        if ($this->schemaEnsured) {
+            return;
+        }
+
+        try {
+            $this->connection->exec(
+                "CREATE TABLE IF NOT EXISTS student_id_cards (\n                    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,\n                    student_id INT NOT NULL,\n                    guid CHAR(36) NOT NULL,\n                    issued_at DATETIME NOT NULL,\n                    expires_at DATE NOT NULL,\n                    status VARCHAR(16) NOT NULL DEFAULT 'ACTIVE',\n                    revoked_at DATETIME NULL,\n                    PRIMARY KEY (id),\n                    UNIQUE KEY student_id_cards_guid_unique (guid),\n                    KEY student_id_cards_student_status_index (student_id, status),\n                    KEY student_id_cards_status_expiry_index (status, expires_at)\n                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+            );
+
+            $columns = $this->columns();
+            if (!isset($columns['student_id'])) {
+                throw new RuntimeException('The existing student_id_cards table is missing student_id and cannot be upgraded automatically.');
+            }
+
+            if (!isset($columns['guid'])) {
+                $this->connection->exec('ALTER TABLE student_id_cards ADD COLUMN guid CHAR(36) NULL AFTER student_id');
+            }
+            if (!isset($columns['issued_at'])) {
+                $this->connection->exec('ALTER TABLE student_id_cards ADD COLUMN issued_at DATETIME NULL');
+            }
+            if (!isset($columns['expires_at'])) {
+                $this->connection->exec('ALTER TABLE student_id_cards ADD COLUMN expires_at DATE NULL');
+            }
+            if (!isset($columns['status'])) {
+                $this->connection->exec("ALTER TABLE student_id_cards ADD COLUMN status VARCHAR(16) NOT NULL DEFAULT 'ACTIVE'");
+            }
+            if (!isset($columns['revoked_at'])) {
+                $this->connection->exec('ALTER TABLE student_id_cards ADD COLUMN revoked_at DATETIME NULL');
+            }
+
+            // Legacy records need identifiers and dates before these fields can
+            // become required. UUID() is evaluated per affected row by MySQL.
+            $this->connection->exec("UPDATE student_id_cards SET guid = UUID() WHERE guid IS NULL OR guid = ''");
+            $this->connection->exec('UPDATE student_id_cards SET issued_at = NOW() WHERE issued_at IS NULL');
+            $this->connection->exec('UPDATE student_id_cards SET expires_at = DATE_ADD(CURDATE(), INTERVAL 1 YEAR) WHERE expires_at IS NULL');
+            $this->connection->exec('ALTER TABLE student_id_cards MODIFY guid CHAR(36) NOT NULL');
+            $this->connection->exec('ALTER TABLE student_id_cards MODIFY issued_at DATETIME NOT NULL');
+            $this->connection->exec('ALTER TABLE student_id_cards MODIFY expires_at DATE NOT NULL');
+
+            $this->ensureIndex('student_id_cards_guid_unique', 'CREATE UNIQUE INDEX student_id_cards_guid_unique ON student_id_cards (guid)');
+            $this->ensureIndex('student_id_cards_student_status_index', 'CREATE INDEX student_id_cards_student_status_index ON student_id_cards (student_id, status)');
+            $this->ensureIndex('student_id_cards_status_expiry_index', 'CREATE INDEX student_id_cards_status_expiry_index ON student_id_cards (status, expires_at)');
+            $this->schemaEnsured = true;
+        } catch (PDOException $exception) {
+            throw new RuntimeException('Unable to prepare the card-verification database table. Please apply the student ID card migration.', 0, $exception);
+        }
+    }
+
+    /** @return array<string, bool> */
+    private function columns(): array
+    {
+        $statement = $this->connection->query('SHOW COLUMNS FROM student_id_cards');
+        $columns = [];
+        foreach ($statement->fetchAll() as $column) {
+            $name = strtolower((string) ($column['Field'] ?? ''));
+            if ($name !== '') {
+                $columns[$name] = true;
+            }
+        }
+        return $columns;
+    }
+
+    private function ensureIndex(string $name, string $statement): void
+    {
+        $indexes = $this->connection->query('SHOW INDEX FROM student_id_cards')->fetchAll();
+        $exists = false;
+        foreach ($indexes as $index) {
+            if (($index['Key_name'] ?? '') === $name) {
+                $exists = true;
+                break;
+            }
+        }
+        if (!$exists) {
+            $this->connection->exec($statement);
+        }
     }
 
     private function isGuid(string $guid): bool
