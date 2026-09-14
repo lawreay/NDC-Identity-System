@@ -4,12 +4,15 @@ require_once __DIR__ . '/../vendor/autoload.php';
 require_once __DIR__ . '/../app/Database.php';
 require_once __DIR__ . '/../app/Auth.php';
 require_once __DIR__ . '/../app/StudentRepository.php';
+require_once __DIR__ . '/../app/CardRepository.php';
 require_once __DIR__ . '/../app/SettingsRepository.php';
 require_once __DIR__ . '/../app/TemplateDesigner/TemplateDesignerService.php';
 require_once __DIR__ . '/../app/Services/CardExportService.php';
+require_once __DIR__ . '/../app/Services/CardVerificationService.php';
 
 use App\Auth;
 use App\Services\CardExportService;
+use App\Services\CardVerificationService;
 
 Auth::requireLogin();
 
@@ -77,6 +80,11 @@ try {
         'authorized_name' => $appSettings['principal_signature_name'] ?? $appSettings['authorized_name'] ?? 'Authorized Officer',
         'authorized_signature_path' => $appSettings['principal_signature_path'] ?? $appSettings['authorized_signature_path'] ?? '',
     ];
+    $verificationService = new CardVerificationService(new CardRepository($connection));
+    foreach ($students as &$student) {
+        $student = $verificationService->issueForStudent($student, (string) ($appSettings['verification_endpoint'] ?? ''));
+    }
+    unset($student);
     $theme = SettingsRepository::themeFromSettings($appSettings);
 
     $exportService = new CardExportService();

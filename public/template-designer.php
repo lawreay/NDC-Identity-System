@@ -446,6 +446,8 @@ if ($template !== null && is_array($template)) {
                                 <button type="button" class="btn btn-sm btn-outline-secondary tag-button" data-tag="{{card.barcode}}">Barcode</button>
                                 <button type="button" class="btn btn-sm btn-outline-secondary tag-button" data-tag="{{card.serial_number}}">Serial</button>
                                 <button type="button" class="btn btn-sm btn-outline-secondary tag-button" data-tag="{{card.verification_code}}">Verify Code</button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary tag-button" data-tag="{{card.guid}}">Card GUID</button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary tag-button" data-tag="{{card.verification_url}}">Verify URL</button>
                             </div>
                             <div class="tag-toolbar">
                                 <div class="fw-semibold mb-2">Signature</div>
@@ -580,6 +582,8 @@ if ($template !== null && is_array($template)) {
         'card.barcode': '<div style="display:inline-flex;align-items:center;justify-content:center;width:140px;height:44px;border:2px dashed #999;font-size:11px;color:#666;">Barcode</div>',
         'card.serial_number': <?= json_encode($student['student_number'] ?? 'BND001', JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>,
         'card.verification_code': <?= json_encode($student['student_number'] ?? 'BND001', JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>,
+        'card.guid': '7f3c8e8d-6b2a-4f1a-9d31-82e91a7c45b6',
+        'card.verification_url': 'https://identity.example.org/verify.php?guid=7f3c8e8d-6b2a-4f1a-9d31-82e91a7c45b6',
         'student.photo': 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==',
         'organization.logo': <?= json_encode($service->renderImageTag($organization['logo_path'] ?? '', 'Organization logo'), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>
     };

@@ -203,21 +203,18 @@ final class CardRenderer
         $studentNumber = trim((string) ($student['student_number'] ?? '')) ?: 'N/A';
         $fullName = $fullName !== '' ? $fullName : 'Student Name';
         $organizationName = trim((string) ($organization['name'] ?? '')) ?: 'NDC';
-        $verificationCode = $this->verificationCode($studentNumber, $fullName, (string) ($student['expiry_date'] ?? ''), $organizationName);
-
-        $qrPayload = json_encode([
-            'verification_code' => $verificationCode,
-            'student_number' => $studentNumber,
-            'student_name' => $fullName,
-            'organization' => $organizationName,
-            'expiry_date' => (string) ($student['expiry_date'] ?? ''),
-        ], JSON_UNESCAPED_SLASHES);
-
-        if ($qrPayload === false) {
-            $qrPayload = $verificationCode;
+        $verificationCode = trim((string) ($student['card_guid'] ?? ''));
+        if ($verificationCode === '') {
+            $verificationCode = $this->verificationCode($studentNumber, $fullName, (string) ($student['expiry_date'] ?? ''), $organizationName);
+        }
+        $verificationUrl = trim((string) ($student['verification_url'] ?? ''));
+        if ($verificationUrl === '') {
+            $verificationUrl = 'https://ndc.edu/verify.php?guid=' . rawurlencode($verificationCode);
         }
 
-        $qrCode = new QrCode($qrPayload, QrCode::ERROR_CORRECTION_MEDIUM);
+        // The QR intentionally contains only a verification URL. Student data
+        // remains server-side where the card can be expired or revoked.
+        $qrCode = new QrCode($verificationUrl, QrCode::ERROR_CORRECTION_MEDIUM);
         $qrSvg = (new QrSvgOutput())->output($qrCode, 240, 'white', 'black');
         $qrPng = (new QrPngOutput())->output($qrCode, 240, [255, 255, 255], [0, 0, 0], 9);
 
@@ -236,6 +233,7 @@ final class CardRenderer
             'email' => trim((string) ($organization['email'] ?? '')) ?: 'info@ndc.edu',
             'authorized_name' => trim((string) ($organization['authorized_name'] ?? '')) ?: 'Authorized Officer',
             'verification_code' => $verificationCode,
+            'verification_short_code' => substr($verificationCode, 0, 18),
             'photo' => $this->imageToDataUri((string) ($student['photo_path'] ?? '')),
             'logo' => $this->imageToDataUri((string) ($organization['logo_path'] ?? '')),
             'signature' => $this->imageToDataUri((string) ($organization['authorized_signature_path'] ?? '')),
@@ -346,6 +344,7 @@ final class CardRenderer
         $svg .= $this->svgImage($this->dataUri('image/png', (string) $data['qr_png']), 628, 203, 134, 134, 'none', 'Verification QR code');
         $svg .= $this->svgText(696, 382, 'Scan the QR code to verify', 12, '#475569', true, 0, 'middle');
         $svg .= $this->svgText(696, 399, 'this student identity card.', 12, '#475569', true, 0, 'middle');
+        $svg .= $this->svgText(696, 423, $this->fitText('ID: ' . (string) $data['verification_short_code'], 220, 10), 10, '#64748b', true, 0, 'middle');
 
         return $svg;
     }
@@ -410,6 +409,7 @@ final class CardRenderer
         $this->drawQrPng($canvas, $data['qr_png'], 628, 203, 134, 134);
         $this->drawText($canvas, 696, 382, 'Scan the QR code to verify', 12, '#475569', true, 0, 'center');
         $this->drawText($canvas, 696, 399, 'this student identity card.', 12, '#475569', true, 0, 'center');
+        $this->drawText($canvas, 696, 423, $this->fitText('ID: ' . (string) $data['verification_short_code'], 220, 10), 10, '#64748b', true, 0, 'center');
     }
 
     /** @param resource $canvas */

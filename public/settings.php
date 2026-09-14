@@ -29,6 +29,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'organization_phone' => trim((string) ($_POST['organization_phone'] ?? '')),
         'organization_email' => trim((string) ($_POST['organization_email'] ?? '')),
         'organization_website' => trim((string) ($_POST['organization_website'] ?? '')),
+        'verification_endpoint' => trim((string) ($_POST['verification_endpoint'] ?? '')),
         'organization_logo_path' => trim((string) ($_POST['organization_logo_path'] ?? '')),
         'principal_signature_name' => trim((string) ($_POST['principal_signature_name'] ?? '')),
         'principal_signature_path' => trim((string) ($_POST['principal_signature_path'] ?? '')),
@@ -265,6 +266,11 @@ $isAdministrator = ($currentUser['role'] ?? '') === 'Administrator';
             <div class="col-md-6">
                 <label class="form-label">Organization Website</label>
                 <input type="text" name="organization_website" class="form-control" value="<?= escape($settings['organization_website'] ?? '') ?>">
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Public Verification URL</label>
+                <input type="url" name="verification_endpoint" class="form-control" value="<?= escape($settings['verification_endpoint'] ?? '') ?>" placeholder="https://identity.example.org/verify.php">
+                <div class="form-text">The QR code links here with a secure card GUID. This page must be publicly accessible.</div>
             </div>
             <div class="col-md-6">
                 <label class="form-label">School Logo Path</label>

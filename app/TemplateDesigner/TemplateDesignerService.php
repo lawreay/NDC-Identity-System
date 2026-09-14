@@ -327,7 +327,11 @@ final class TemplateDesignerService
         }
 
         $serialNumber = (string) ($student['student_number'] ?? 'N/A');
-        $verificationCode = $this->verificationCode($student, $organization);
+        $verificationCode = trim((string) ($student['card_guid'] ?? '')) ?: $this->verificationCode($student, $organization);
+        $verificationUrl = trim((string) ($student['verification_url'] ?? ''));
+        if ($verificationUrl === '') {
+            $verificationUrl = 'https://ndc.edu/verify.php?guid=' . rawurlencode($verificationCode);
+        }
 
         $replacements = [
             'student.photo' => $this->renderImageTag($this->imagePath($student['photo_path'] ?? ''), 'Student photo'),
@@ -352,7 +356,7 @@ final class TemplateDesignerService
             'organization.phone' => htmlspecialchars((string) ($organization['phone'] ?? '+265 999 000 000'), ENT_QUOTES, 'UTF-8'),
             'organization.email' => htmlspecialchars((string) ($organization['email'] ?? 'info@ndc.edu'), ENT_QUOTES, 'UTF-8'),
             'organization.website' => htmlspecialchars((string) ($organization['website'] ?? 'https://ndc.edu'), ENT_QUOTES, 'UTF-8'),
-            'card.qr_code' => $this->renderQrCodeHtml($verificationCode, $student, $organization),
+            'card.qr_code' => $this->renderQrCodeHtml($verificationUrl),
             'card.barcode' => $this->renderBarcodeHtml($verificationCode),
             'authorized.signature' => $this->authorizedSignatureHtml($organization['authorized_signature_path'] ?? ''),
             'authorized.name' => htmlspecialchars((string) ($organization['authorized_name'] ?? 'Authorized Officer'), ENT_QUOTES, 'UTF-8'),
@@ -361,6 +365,8 @@ final class TemplateDesignerService
             'organization.signature' => $this->authorizedSignatureHtml($organization['authorized_signature_path'] ?? ''),
             'card.serial_number' => htmlspecialchars($serialNumber, ENT_QUOTES, 'UTF-8'),
             'card.verification_code' => htmlspecialchars($verificationCode, ENT_QUOTES, 'UTF-8'),
+            'card.guid' => htmlspecialchars($verificationCode, ENT_QUOTES, 'UTF-8'),
+            'card.verification_url' => htmlspecialchars($verificationUrl, ENT_QUOTES, 'UTF-8'),
             'theme.primary_color' => htmlspecialchars((string) ($theme['primary_color'] ?? '#0b5ed7'), ENT_QUOTES, 'UTF-8'),
             'theme.secondary_color' => htmlspecialchars((string) ($theme['secondary_color'] ?? '#0a7e8c'), ENT_QUOTES, 'UTF-8'),
             'theme.accent_color' => htmlspecialchars((string) ($theme['accent_color'] ?? '#f4b400'), ENT_QUOTES, 'UTF-8'),
@@ -794,18 +800,9 @@ HTML;
      * @param array<string, mixed> $student
      * @param array<string, mixed> $organization
      */
-    private function renderQrCodeHtml(string $verificationCode, array $student, array $organization): string
+    private function renderQrCodeHtml(string $verificationUrl): string
     {
-        $payload = [
-            'verification_code' => $verificationCode,
-            'student_number' => (string) ($student['student_number'] ?? ''),
-            'student_name' => (string) ($student['full_name'] ?? ''),
-            'organization' => (string) ($organization['name'] ?? 'NDC'),
-            'expiry_date' => (string) ($student['expiry_date'] ?? ''),
-        ];
-
-        $data = json_encode($payload, JSON_UNESCAPED_SLASHES) ?: $verificationCode;
-        $qrCode = new \Mpdf\QrCode\QrCode($data, \Mpdf\QrCode\QrCode::ERROR_CORRECTION_MEDIUM);
+        $qrCode = new \Mpdf\QrCode\QrCode($verificationUrl, \Mpdf\QrCode\QrCode::ERROR_CORRECTION_MEDIUM);
         $png = (new \Mpdf\QrCode\Output\Png())->output($qrCode, 240, [255, 255, 255], [0, 0, 0], 9);
         $src = 'data:image/png;base64,' . base64_encode($png);
 

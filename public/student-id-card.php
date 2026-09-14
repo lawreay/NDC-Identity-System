@@ -1,11 +1,14 @@
 <?php
 require_once __DIR__ . '/../app/Database.php';
 require_once __DIR__ . '/../app/StudentRepository.php';
+require_once __DIR__ . '/../app/CardRepository.php';
 require_once __DIR__ . '/../app/SettingsRepository.php';
 require_once __DIR__ . '/../app/TemplateDesigner/TemplateDesignerService.php';
 require_once __DIR__ . '/../app/Auth.php';
+require_once __DIR__ . '/../app/Services/CardVerificationService.php';
 
 use App\Auth;
+use App\Services\CardVerificationService;
 
 Auth::requireLogin();
 
@@ -72,6 +75,8 @@ try {
             'authorized_name' => $appSettings['principal_signature_name'] ?? $appSettings['authorized_name'] ?? 'Authorized Officer',
             'authorized_signature_path' => $appSettings['principal_signature_path'] ?? $appSettings['authorized_signature_path'] ?? '',
         ];
+        $student = (new CardVerificationService(new CardRepository(Database::getConnection())))
+            ->issueForStudent($student, (string) ($appSettings['verification_endpoint'] ?? ''));
         $theme = SettingsRepository::themeFromSettings($appSettings);
         $frontPreview = $service->renderTemplate($selectedTemplate, $student, $organization, $theme, 'front');
         $backPreview = $service->renderTemplate($selectedTemplate, $student, $organization, $theme, 'back');
