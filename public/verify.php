@@ -19,6 +19,7 @@ try {
     $result = (new CardVerificationService(new CardRepository($connection)))->verify($guid);
 } catch (Throwable $exception) {
     http_response_code(503);
+    error_log('Card verification failed for GUID ' . ($guid !== '' ? $guid : '[missing]') . ': ' . $exception->getMessage() . ' in ' . $exception->getFile() . ':' . $exception->getLine());
     $error = 'Verification is temporarily unavailable. Please contact the institution.';
 }
 
