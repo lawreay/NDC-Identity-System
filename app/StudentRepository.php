@@ -63,6 +63,33 @@ final class StudentRepository
         return $student === false ? null : $student;
     }
 
+    /**
+     * @param array<int, int> $ids
+     * @return array<int, array<string, mixed>>
+     */
+    public function findByIds(array $ids): array
+    {
+        $ids = array_values(array_unique(array_filter($ids, static fn (int $id): bool => $id > 0)));
+        if ($ids === []) {
+            return [];
+        }
+
+        $placeholders = [];
+        $parameters = [];
+        foreach ($ids as $index => $id) {
+            $placeholder = ':id_' . $index;
+            $placeholders[] = $placeholder;
+            $parameters[$placeholder] = $id;
+        }
+
+        $statement = $this->connection->prepare(
+            'SELECT id, student_number, photo_path, first_name, last_name, gender, date_of_birth, district, traditional_authority, village, phone_number, qualification, program, class_level, billing_category, status FROM students WHERE id IN (' . implode(', ', $placeholders) . ') ORDER BY first_name, last_name, id'
+        );
+        $statement->execute($parameters);
+
+        return $statement->fetchAll();
+    }
+
     public function updatePhoto(int $id, string $photoPath): bool
     {
         $statement = $this->connection->prepare('UPDATE students SET photo_path = :photo_path WHERE id = :id');

@@ -59,10 +59,20 @@ try {
         <?php if ($students === []): ?>
             <div class="alert alert-info">No students found.</div>
         <?php else: ?>
+            <form method="post" action="export-cards-bulk.php" id="bulkExportForm">
+                <input type="hidden" name="_csrf" value="<?= htmlspecialchars(Auth::csrfToken(), ENT_QUOTES, 'UTF-8') ?>">
+                <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+                    <small class="text-muted">Select students, then download both sides of each ID card. Maximum 250 students per export.</small>
+                    <div class="btn-group">
+                        <button type="submit" name="export_format" value="pdf" class="btn btn-primary">Export selected PDF</button>
+                        <button type="submit" name="export_format" value="png_zip" class="btn btn-outline-primary">Export selected PNG ZIP</button>
+                    </div>
+                </div>
             <div class="table-responsive">
                 <table class="table table-striped align-middle bg-white shadow-sm rounded">
                     <thead class="table-dark">
                         <tr>
+                            <th scope="col" style="width: 44px;"><input type="checkbox" class="form-check-input" id="selectAllStudents" aria-label="Select all students"></th>
                             <th>Student #</th>
                             <th>Name</th>
                             <th>Program</th>
@@ -74,6 +84,7 @@ try {
                     <tbody>
                         <?php foreach ($students as $student): ?>
                             <tr>
+                                <td><input type="checkbox" class="form-check-input js-student-select" name="student_ids[]" value="<?= (int) ($student['id'] ?? 0) ?>" aria-label="Select <?= htmlspecialchars(trim((string) ($student['first_name'] ?? '') . ' ' . (string) ($student['last_name'] ?? '')), ENT_QUOTES, 'UTF-8') ?>"></td>
                                 <td><?= htmlspecialchars((string) ($student['student_number'] ?? ''), ENT_QUOTES, 'UTF-8') ?></td>
                                 <td><?= htmlspecialchars(trim((string) ($student['first_name'] ?? '') . ' ' . (string) ($student['last_name'] ?? '')), ENT_QUOTES, 'UTF-8') ?></td>
                                 <td><?= htmlspecialchars((string) ($student['program'] ?? ''), ENT_QUOTES, 'UTF-8') ?></td>
@@ -88,7 +99,23 @@ try {
                     </tbody>
                 </table>
             </div>
+            </form>
         <?php endif; ?>
     </div>
+<script>
+    const selectAllStudents = document.getElementById('selectAllStudents');
+    const studentSelections = document.querySelectorAll('.js-student-select');
+    if (selectAllStudents) {
+        selectAllStudents.addEventListener('change', () => {
+            studentSelections.forEach((checkbox) => { checkbox.checked = selectAllStudents.checked; });
+        });
+        studentSelections.forEach((checkbox) => {
+            checkbox.addEventListener('change', () => {
+                selectAllStudents.checked = studentSelections.length > 0 && [...studentSelections].every((item) => item.checked);
+                selectAllStudents.indeterminate = [...studentSelections].some((item) => item.checked) && !selectAllStudents.checked;
+            });
+        });
+    }
+</script>
 </body>
 </html>
