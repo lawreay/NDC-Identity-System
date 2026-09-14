@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/../app/Database.php';
 require_once __DIR__ . '/../app/StudentRepository.php';
+require_once __DIR__ . '/../app/CardRepository.php';
 require_once __DIR__ . '/../app/Auth.php';
 require_once __DIR__ . '/../app/Services/ImageUploadService.php';
 
@@ -12,9 +13,14 @@ Auth::requireLogin();
 $id = isset($_GET['id']) ? (int) $_GET['id'] : 0;
 $uploadMessage = '';
 $uploadType = '';
+$cardMessage = '';
+$cardMessageType = '';
+$card = null;
+$cardRepository = null;
 
 try {
     $repository = new StudentRepository(Database::getConnection());
+    $cardRepository = new CardRepository(Database::getConnection());
     $student = $repository->findById($id);
     $errorMessage = null;
 } catch (Throwable $exception) {
@@ -31,10 +37,41 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $id > 0) {
         $csrfException = null; // Use variable to avoid unused warning
     }
     
-    $file = $_FILES['photo'] ?? [];
-    $hasSelectedFile = is_array($file) && !empty($file['name']) && (($file['size'] ?? 0) > 0) && $uploadMessage === '';
+    $action = (string) ($_POST['action'] ?? 'upload_photo');
+    if ($uploadMessage === '' && $action === 'revoke_card') {
+        $currentUser = Auth::user();
+        if (($currentUser['role'] ?? '') !== 'Administrator') {
+            $cardMessage = 'Only administrators can revoke an ID card.';
+            $cardMessageType = 'danger';
+        } elseif (!$cardRepository instanceof CardRepository) {
+            $cardMessage = 'Card verification is not available.';
+            $cardMessageType = 'danger';
+        } else {
+            try {
+                $issuedCard = $cardRepository->findLatestByStudentId($id);
+                if (!$issuedCard || ($issuedCard['status'] ?? '') !== 'ACTIVE') {
+                    $cardMessage = 'There is no active ID card to revoke.';
+                    $cardMessageType = 'warning';
+                } elseif ($cardRepository->revokeCard((string) $issuedCard['guid'])) {
+                    $cardMessage = 'The ID card was revoked. Its verification QR will now report REVOKED.';
+                    $cardMessageType = 'success';
+                } else {
+                    $cardMessage = 'Unable to revoke the ID card.';
+                    $cardMessageType = 'danger';
+                }
+            } catch (Throwable $exception) {
+                $cardMessage = $exception->getMessage();
+                $cardMessageType = 'danger';
+            }
+        }
+    } elseif ($uploadMessage === '') {
+        $file = $_FILES['photo'] ?? [];
+        $hasSelectedFile = is_array($file) && !empty($file['name']) && (($file['size'] ?? 0) > 0);
 
-    if ($hasSelectedFile) {
+        if (!$hasSelectedFile) {
+            $uploadMessage = 'Please choose a photo to upload.';
+            $uploadType = 'warning';
+        } else {
         $fileTooLarge = (int) ($file['size'] ?? 0) > 5 * 1024 * 1024;
 
         if ($fileTooLarge) {
@@ -55,9 +92,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $id > 0) {
                 $uploadType = 'danger';
             }
         }
-    } else {
-        $uploadMessage = 'Please choose a photo to upload.';
-        $uploadType = 'warning';
+        }
+    }
+}
+
+if ($student && $cardRepository instanceof CardRepository) {
+    try {
+        $card = $cardRepository->findLatestByStudentId($id);
+    } catch (Throwable $exception) {
+        $card = null;
     }
 }
 
@@ -118,6 +161,9 @@ if (isset($_GET['created'])) {
         <?php else: ?>
             <?php if ($uploadMessage !== ''): ?>
                 <div class="alert alert-<?= htmlspecialchars($uploadType, ENT_QUOTES, 'UTF-8') ?>"><?= htmlspecialchars($uploadMessage, ENT_QUOTES, 'UTF-8') ?></div>
+            <?php endif; ?>
+            <?php if ($cardMessage !== ''): ?>
+                <div class="alert alert-<?= htmlspecialchars($cardMessageType, ENT_QUOTES, 'UTF-8') ?>"><?= htmlspecialchars($cardMessage, ENT_QUOTES, 'UTF-8') ?></div>
             <?php endif; ?>
 
             <div class="card shadow-sm">
@@ -211,6 +257,27 @@ if (isset($_GET['created'])) {
                                 <div class="col-sm-6">
                                     <div class="text-muted small">Village</div>
                                     <div class="fw-semibold"><?= htmlspecialchars((string) ($student['village'] ?? ''), ENT_QUOTES, 'UTF-8') ?></div>
+                                </div>
+                            </div>
+                            <div class="border-top mt-4 pt-3">
+                                <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+                                    <div>
+                                        <div class="text-muted small">Latest ID card</div>
+                                        <?php if ($card): ?>
+                                            <div class="fw-semibold"><?= htmlspecialchars((string) ($card['status'] ?? ''), ENT_QUOTES, 'UTF-8') ?> · Expires <?= htmlspecialchars((string) ($card['expires_at'] ?? ''), ENT_QUOTES, 'UTF-8') ?></div>
+                                            <div class="small text-muted font-monospace mt-1"><?= htmlspecialchars((string) ($card['guid'] ?? ''), ENT_QUOTES, 'UTF-8') ?></div>
+                                        <?php else: ?>
+                                            <div class="fw-semibold">No card issued yet</div>
+                                            <div class="small text-muted">Opening the card preview or exporting it issues the card.</div>
+                                        <?php endif; ?>
+                                    </div>
+                                    <?php if ($card && ($card['status'] ?? '') === 'ACTIVE' && (Auth::user()['role'] ?? '') === 'Administrator'): ?>
+                                        <form method="post" onsubmit="return confirm('Revoke this ID card? Its QR code will immediately report that it is revoked.');">
+                                            <input type="hidden" name="_csrf" value="<?= htmlspecialchars(Auth::csrfToken(), ENT_QUOTES, 'UTF-8') ?>">
+                                            <input type="hidden" name="action" value="revoke_card">
+                                            <button type="submit" class="btn btn-outline-danger btn-sm">Revoke ID card</button>
+                                        </form>
+                                    <?php endif; ?>
                                 </div>
                             </div>
                         </div>

@@ -74,6 +74,26 @@ final class CardRepository
         return is_array($card) ? $card : null;
     }
 
+    /** @return array<string, mixed>|null */
+    public function findLatestByStudentId(int $studentId): ?array
+    {
+        if ($studentId <= 0) {
+            return null;
+        }
+
+        $statement = $this->connection->prepare(
+            'SELECT id, student_id, guid, issued_at, expires_at, status, revoked_at\n             FROM student_id_cards\n             WHERE student_id = :student_id\n             ORDER BY id DESC\n             LIMIT 1'
+        );
+        try {
+            $statement->execute([':student_id' => $studentId]);
+        } catch (PDOException $exception) {
+            throw new RuntimeException('Card verification is not set up. Apply the student ID card migration.', 0, $exception);
+        }
+
+        $card = $statement->fetch();
+        return is_array($card) ? $card : null;
+    }
+
     public function revokeCard(string $guid): bool
     {
         return $this->updateStatus($guid, 'REVOKED');
