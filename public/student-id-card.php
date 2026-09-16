@@ -104,6 +104,8 @@ function escape(string $value): string
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Student ID Card Preview</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <link href="assets/app.css" rel="stylesheet">
     <style>
         body { background: #f6f8fb; }
         .preview-frame { border: 1px solid #d9e2ef; border-radius: 12px; background: #fff; min-height: 360px; padding: 16px; overflow:auto; display:block; position:relative; }

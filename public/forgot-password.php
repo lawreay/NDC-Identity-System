@@ -44,6 +44,8 @@ function escape(string $value): string
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Forgot Password</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <link href="assets/app.css" rel="stylesheet">
 </head>
 <body class="bg-light">
 <div class="container py-5">
@@ -51,6 +53,7 @@ function escape(string $value): string
         <div class="col-md-6 col-lg-5">
             <div class="card shadow-sm">
                 <div class="card-body p-4">
+                    <div class="ndc-eyebrow"><i class="bi bi-shield-lock-fill me-1" aria-hidden="true"></i>Account access</div>
                     <h1 class="h3 mb-1">Forgot password</h1>
                     <p class="text-muted mb-4">Enter your account email and we will send a reset link.</p>
 
@@ -74,7 +77,7 @@ function escape(string $value): string
                             <label class="form-label" for="email">Email</label>
                             <input id="email" type="email" name="email" class="form-control" value="<?= escape($email) ?>" required autocomplete="email" autofocus>
                         </div>
-                        <button type="submit" class="btn btn-primary w-100">Send reset link</button>
+                        <button type="submit" class="btn btn-primary w-100"><i class="bi bi-envelope-arrow-up me-1" aria-hidden="true"></i>Send reset link</button>
                     </form>
 
                     <div class="mt-3 text-center">
