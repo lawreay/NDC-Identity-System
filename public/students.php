@@ -29,6 +29,11 @@ try {
     $errorMessage = $exception->getMessage();
 }
 
+$studentsMissingSurname = array_values(array_filter(
+    $students,
+    static fn (array $student): bool => trim((string) ($student['last_name'] ?? '')) === ''
+));
+
 ?><!DOCTYPE html>
 <html lang="en">
 <head>
@@ -73,6 +78,12 @@ try {
         <?php if ($students === []): ?>
             <div class="alert alert-info">No students found.</div>
         <?php else: ?>
+            <?php if ($studentsMissingSurname !== []): ?>
+                <div class="alert alert-warning d-flex align-items-center gap-2" role="alert">
+                    <i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i>
+                    <span><?= count($studentsMissingSurname) ?> student<?= count($studentsMissingSurname) === 1 ? '' : 's' ?> <?= count($studentsMissingSurname) === 1 ? 'is' : 'are' ?> missing a surname. Marked rows should be completed before issuing or recalculating IDs.</span>
+                </div>
+            <?php endif; ?>
             <form method="post" action="export-cards-bulk.php" id="bulkExportForm">
                 <input type="hidden" name="_csrf" value="<?= htmlspecialchars(Auth::csrfToken(), ENT_QUOTES, 'UTF-8') ?>">
                 <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
@@ -108,10 +119,19 @@ try {
                     </thead>
                     <tbody>
                         <?php foreach ($students as $student): ?>
-                            <tr class="js-student-row">
+                            <?php
+                            $studentName = trim((string) ($student['first_name'] ?? '') . ' ' . (string) ($student['last_name'] ?? ''));
+                            $missingSurname = trim((string) ($student['last_name'] ?? '')) === '';
+                            ?>
+                            <tr class="js-student-row<?= $missingSurname ? ' table-warning' : '' ?>">
                                 <td><input type="checkbox" class="form-check-input js-student-select" name="student_ids[]" value="<?= (int) ($student['id'] ?? 0) ?>" aria-label="Select <?= htmlspecialchars(trim((string) ($student['first_name'] ?? '') . ' ' . (string) ($student['last_name'] ?? '')), ENT_QUOTES, 'UTF-8') ?>"></td>
                                 <td><?= htmlspecialchars((string) ($student['student_number'] ?? ''), ENT_QUOTES, 'UTF-8') ?></td>
-                                <td><?= htmlspecialchars(trim((string) ($student['first_name'] ?? '') . ' ' . (string) ($student['last_name'] ?? '')), ENT_QUOTES, 'UTF-8') ?></td>
+                                <td>
+                                    <?= htmlspecialchars($studentName, ENT_QUOTES, 'UTF-8') ?>
+                                    <?php if ($missingSurname): ?>
+                                        <span class="badge text-bg-warning ms-1" title="Surname missing"><i class="bi bi-exclamation-triangle-fill me-1" aria-hidden="true"></i>Surname missing</span>
+                                    <?php endif; ?>
+                                </td>
                                 <td><?= htmlspecialchars((string) ($student['program'] ?? ''), ENT_QUOTES, 'UTF-8') ?></td>
                                 <td><?= htmlspecialchars((string) ($student['class_level'] ?? ''), ENT_QUOTES, 'UTF-8') ?></td>
                                 <td><?= htmlspecialchars((string) ($student['status'] ?? ''), ENT_QUOTES, 'UTF-8') ?></td>

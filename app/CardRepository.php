@@ -138,6 +138,53 @@ final class CardRepository
         }
     }
 
+    /**
+     * Reissues every currently active ID card. Students without an issued card
+     * are intentionally skipped so this does not create cards unexpectedly.
+     */
+    public function reissueAllActiveCards(): int
+    {
+        $this->ensureSchema();
+
+        try {
+            $students = $this->connection->query(
+                "SELECT DISTINCT student_id
+                 FROM student_id_cards
+                 WHERE status = 'ACTIVE'
+                 ORDER BY student_id"
+            )->fetchAll();
+
+            if ($students === []) {
+                return 0;
+            }
+
+            $this->connection->beginTransaction();
+            $count = 0;
+            foreach ($students as $student) {
+                $studentId = (int) ($student['student_id'] ?? 0);
+                if ($studentId <= 0) {
+                    continue;
+                }
+
+                $this->reissueCard($studentId);
+                $count++;
+            }
+            $this->connection->commit();
+
+            return $count;
+        } catch (Throwable $exception) {
+            if ($this->connection->inTransaction()) {
+                $this->connection->rollBack();
+            }
+
+            if ($exception instanceof RuntimeException) {
+                throw $exception;
+            }
+
+            throw new RuntimeException('Unable to recalculate active ID cards.', 0, $exception);
+        }
+    }
+
     /** @return array<string, mixed>|null */
     public function findByGuid(string $guid): ?array
     {

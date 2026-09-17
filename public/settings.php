@@ -2,6 +2,7 @@
 require_once __DIR__ . '/../app/Database.php';
 require_once __DIR__ . '/../app/SettingsRepository.php';
 require_once __DIR__ . '/../app/Auth.php';
+require_once __DIR__ . '/../app/CardRepository.php';
 require_once __DIR__ . '/../app/Services/ImageUploadService.php';
 
 use App\Auth;
@@ -11,6 +12,8 @@ Auth::requireLogin();
 
 $errors = [];
 $success = '';
+$currentUser = Auth::user();
+$isAdministrator = ($currentUser['role'] ?? '') === 'Administrator';
 
 try {
     $repository = new SettingsRepository(Database::getConnection());
@@ -22,6 +25,22 @@ try {
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     Auth::requireCsrf();
+
+    $action = (string) ($_POST['action'] ?? 'save_settings');
+    if ($action === 'recalculate_active_ids') {
+        if (!$isAdministrator) {
+            $errors[] = 'Only administrators can recalculate issued IDs.';
+        } else {
+            try {
+                $recalculated = (new CardRepository(Database::getConnection()))->reissueAllActiveCards();
+                $success = $recalculated === 0
+                    ? 'There are no active ID cards to recalculate.'
+                    : $recalculated . ' active ID ' . ($recalculated === 1 ? 'was' : 'cards were') . ' recalculated. Previous QR codes are now invalid.';
+            } catch (Throwable $exception) {
+                $errors[] = $exception->getMessage();
+            }
+        }
+    } else {
 
     $input = [
         'organization_name' => trim((string) ($_POST['organization_name'] ?? '')),
@@ -119,6 +138,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $errors[] = 'Unable to save settings: ' . $exception->getMessage();
         }
     }
+    }
 }
 
 $theme = SettingsRepository::themeFromSettings($settings);
@@ -150,8 +170,6 @@ function getPreviewSrc(?string $path): ?string
 
 $logoPreview = getPreviewSrc($settings['organization_logo_path'] ?? '');
 $signaturePreview = getPreviewSrc($settings['principal_signature_path'] ?? $settings['authorized_signature_path'] ?? '');
-$currentUser = Auth::user();
-$isAdministrator = ($currentUser['role'] ?? '') === 'Administrator';
 
 ?><!DOCTYPE html>
 <html lang="en">
@@ -203,6 +221,7 @@ $isAdministrator = ($currentUser['role'] ?? '') === 'Administrator';
 
     <form method="post" enctype="multipart/form-data">
         <input type="hidden" name="_csrf" value="<?= escape(Auth::csrfToken()) ?>">
+        <input type="hidden" name="action" value="save_settings">
         <div class="row g-3">
             <div class="col-12">
                 <h2 class="h5">Change Password</h2>
@@ -308,6 +327,22 @@ $isAdministrator = ($currentUser['role'] ?? '') === 'Administrator';
             <button type="submit" class="btn btn-primary">Save Settings</button>
         </div>
     </form>
+
+    <?php if ($isAdministrator): ?>
+        <div class="card border-warning shadow-sm mt-4">
+            <div class="card-body d-flex flex-wrap align-items-center justify-content-between gap-3">
+                <div>
+                    <h2 class="h5 mb-1"><i class="bi bi-arrow-repeat me-1" aria-hidden="true"></i>ID Recalculation</h2>
+                    <p class="text-muted mb-0">Reissue every currently active student ID after institution-wide changes. This replaces every active verification QR; students without an issued card are not affected.</p>
+                </div>
+                <form method="post" onsubmit="return confirm('Recalculate every active ID card? This creates new QR codes and invalidates every previously printed active card.');">
+                    <input type="hidden" name="_csrf" value="<?= escape(Auth::csrfToken()) ?>">
+                    <input type="hidden" name="action" value="recalculate_active_ids">
+                    <button type="submit" class="btn btn-outline-warning">Recalculate Active IDs</button>
+                </form>
+            </div>
+        </div>
+    <?php endif; ?>
 </div>
 </body>
 </html>
