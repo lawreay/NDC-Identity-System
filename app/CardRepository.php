@@ -306,6 +306,11 @@ final class CardRepository
             $this->connection->exec('ALTER TABLE student_id_cards MODIFY issued_at DATETIME NOT NULL');
             $this->connection->exec('ALTER TABLE student_id_cards MODIFY expires_at DATE NOT NULL');
 
+            // Older releases allowed only one row per student through a
+            // `unique_student_card` index. Recalculation retains the old card
+            // as revoked history, so remove only that legacy one-column unique
+            // index. The GUID uniqueness rule remains intact.
+            $this->dropLegacyUniqueStudentIndex();
             $this->ensureIndex('student_id_cards_guid_unique', 'CREATE UNIQUE INDEX student_id_cards_guid_unique ON student_id_cards (guid)');
             $this->ensureIndex('student_id_cards_student_status_index', 'CREATE INDEX student_id_cards_student_status_index ON student_id_cards (student_id, status)');
             $this->ensureIndex('student_id_cards_status_expiry_index', 'CREATE INDEX student_id_cards_status_expiry_index ON student_id_cards (status, expires_at)');
@@ -341,6 +346,32 @@ final class CardRepository
         }
         if (!$exists) {
             $this->connection->exec($statement);
+        }
+    }
+
+    private function dropLegacyUniqueStudentIndex(): void
+    {
+        $indexes = $this->connection->query('SHOW INDEX FROM student_id_cards')->fetchAll();
+        $byName = [];
+        foreach ($indexes as $index) {
+            $name = (string) ($index['Key_name'] ?? '');
+            if ($name === '' || $name === 'PRIMARY') {
+                continue;
+            }
+
+            $byName[$name]['unique'] = ((int) ($index['Non_unique'] ?? 1)) === 0;
+            $byName[$name]['columns'][(int) ($index['Seq_in_index'] ?? 0)] = strtolower((string) ($index['Column_name'] ?? ''));
+        }
+
+        foreach ($byName as $name => $index) {
+            ksort($index['columns']);
+            $columns = array_values($index['columns']);
+            if (($index['unique'] ?? false) !== true || $columns !== ['student_id']) {
+                continue;
+            }
+
+            $quotedName = '`' . str_replace('`', '``', $name) . '`';
+            $this->connection->exec('DROP INDEX ' . $quotedName . ' ON student_id_cards');
         }
     }
 

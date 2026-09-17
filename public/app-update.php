@@ -2,9 +2,11 @@
 require_once __DIR__ . '/../app/Database.php';
 require_once __DIR__ . '/../app/Auth.php';
 require_once __DIR__ . '/../app/AppUpdateService.php';
+require_once __DIR__ . '/../app/DatabaseDumpService.php';
 
 use App\AppUpdateService;
 use App\Auth;
+use App\DatabaseDumpService;
 
 Auth::requireRole('Administrator');
 
@@ -33,6 +35,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } elseif ($action === 'rollback') {
             $service->rollbackPendingUpdate('Update rolled back manually.');
             $success = 'Update rolled back.';
+        } elseif ($action === 'download_database_dump') {
+            $dumpPath = (new DatabaseDumpService(Database::getConnection()))->createTemporaryDump();
+
+            try {
+                if (session_status() === PHP_SESSION_ACTIVE) {
+                    session_write_close();
+                }
+
+                $filename = 'ndc_identity_database_' . date('Y-m-d_H-i-s') . '.sql';
+                header('Content-Type: application/sql; charset=utf-8');
+                header('Content-Disposition: attachment; filename="' . $filename . '"');
+                header('Content-Length: ' . (string) filesize($dumpPath));
+                header('Cache-Control: no-store, private');
+                header('X-Content-Type-Options: nosniff');
+                readfile($dumpPath);
+            } finally {
+                @unlink($dumpPath);
+            }
+
+            exit;
+        } elseif ($action === 'import_database_dump') {
+            if ((string) ($_POST['confirm_database_import'] ?? '') !== '1') {
+                throw new RuntimeException('Confirm that the import will replace the current database before continuing.');
+            }
+
+            $count = (new DatabaseDumpService(Database::getConnection()))->importUploadedDump($_FILES['database_dump'] ?? []);
+            $success = 'Database import complete. ' . $count . ' SQL statements were applied.';
         }
     } catch (Throwable $exception) {
         $errors[] = $exception->getMessage();
@@ -196,6 +225,45 @@ function formatBytes(int $bytes): string
                     <?php endif; ?>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <div class="card shadow-sm mt-4">
+        <div class="card-body">
+            <div class="d-flex flex-wrap align-items-center gap-3">
+                <div>
+                    <h2 class="h5 mb-1">Database Backup</h2>
+                    <p class="text-muted mb-0">Download a full SQL backup of the current database before making major changes or restoring data.</p>
+                </div>
+                <form method="post" class="ms-md-auto" onsubmit="return confirm('Download a complete database backup? The SQL file contains sensitive student and user data.');">
+                    <input type="hidden" name="_csrf" value="<?= escape(Auth::csrfToken()) ?>">
+                    <input type="hidden" name="action" value="download_database_dump">
+                    <button type="submit" class="btn btn-outline-primary"><i class="bi bi-database-down me-1"></i>Download SQL Backup</button>
+                </form>
+            </div>
+            <p class="small text-warning-emphasis mb-0 mt-3"><i class="bi bi-shield-lock me-1"></i>Keep backup files private. Imports replace tables and data in the current application database.</p>
+
+            <hr class="my-4">
+
+            <form method="post" enctype="multipart/form-data" onsubmit="return confirm('Restore this SQL file into the current NDC database? Existing tables and data can be replaced and this cannot be undone.');">
+                <h3 class="h6 text-danger">Restore Database from SQL</h3>
+                <p class="small text-muted">Use a SQL backup for this NDC Identity System. Take a fresh backup first. If the file is invalid, its changes may be only partially applied.</p>
+                <input type="hidden" name="_csrf" value="<?= escape(Auth::csrfToken()) ?>">
+                <input type="hidden" name="action" value="import_database_dump">
+                <div class="row g-3 align-items-end">
+                    <div class="col-md-7">
+                        <label for="database_dump" class="form-label">SQL backup file</label>
+                        <input id="database_dump" type="file" name="database_dump" class="form-control" accept=".sql,application/sql,text/plain" required>
+                    </div>
+                    <div class="col-md-5">
+                        <div class="form-check mb-2">
+                            <input id="confirm_database_import" class="form-check-input" type="checkbox" name="confirm_database_import" value="1" required>
+                            <label class="form-check-label" for="confirm_database_import">I understand this replaces current data.</label>
+                        </div>
+                        <button type="submit" class="btn btn-danger"><i class="bi bi-database-up me-1"></i>Restore SQL Backup</button>
+                    </div>
+                </div>
+            </form>
         </div>
     </div>
 
