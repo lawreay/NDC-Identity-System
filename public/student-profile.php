@@ -185,28 +185,41 @@ if (isset($_GET['created'])) {
                             <form method="post" enctype="multipart/form-data" class="mt-3">
                                 <input type="hidden" name="id" value="<?= (int) ($student['id'] ?? 0) ?>">
                                 <input type="hidden" name="_csrf" value="<?= htmlspecialchars(Auth::csrfToken(), ENT_QUOTES, 'UTF-8') ?>">
-                                <label class="form-label" for="profilePhoto">Upload photo</label>
+                                <label class="form-label" for="profilePhoto">Choose a new photo</label>
                                 <input id="profilePhoto" type="file" name="photo" accept="image/png,image/jpeg,image/webp" class="form-control" data-photo-input>
-                                <div class="photo-upload-editor mt-3" data-photo-editor data-input-id="profilePhoto" hidden>
+                                <?php if ($hasPhoto): ?>
+                                    <button type="button" class="btn btn-outline-primary btn-sm mt-2" data-photo-edit-existing>
+                                        <i class="bi bi-sliders me-1" aria-hidden="true"></i>Adjust current photo
+                                    </button>
+                                <?php endif; ?>
+                                <div class="photo-upload-editor mt-3" data-photo-editor data-input-id="profilePhoto" data-photo-existing-url="<?= htmlspecialchars($photoUrl, ENT_QUOTES, 'UTF-8') ?>" hidden>
                                     <div class="photo-upload-stage border rounded" data-photo-stage>
                                         <img data-photo-source alt="Selected student photo">
                                     </div>
-                                    <div class="form-text mt-2">Drag the photo to position it. Drag the blue border to move the crop area, or drag a blue corner to resize it.</div>
-                                    <div class="d-flex flex-wrap align-items-center gap-2 mt-2">
+                                    <div class="form-text mt-2">Drag the photo to position it. Drag the frame or its corners to adjust the 4:5 ID-card crop. Use the mouse wheel to zoom.</div>
+                                    <div class="photo-editor-toolbar mt-3">
                                         <div class="btn-group btn-group-sm" role="group" aria-label="Photo framing mode">
                                             <input id="profilePhotoCrop" class="btn-check" type="radio" name="profile_photo_mode" value="crop" data-photo-mode checked>
                                             <label class="btn btn-outline-secondary" for="profilePhotoCrop">Crop</label>
                                             <input id="profilePhotoFit" class="btn-check" type="radio" name="profile_photo_mode" value="fit" data-photo-mode>
                                             <label class="btn btn-outline-secondary" for="profilePhotoFit">Fit on white</label>
                                         </div>
-                                        <button type="button" class="btn btn-outline-secondary btn-sm" data-photo-reset>Reset</button>
+                                        <div class="btn-group btn-group-sm" role="group" aria-label="Photo adjustments">
+                                            <button type="button" class="btn btn-outline-secondary" data-photo-rotate-left title="Rotate left" aria-label="Rotate left"><i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i></button>
+                                            <button type="button" class="btn btn-outline-secondary" data-photo-rotate-right title="Rotate right" aria-label="Rotate right"><i class="bi bi-arrow-clockwise" aria-hidden="true"></i></button>
+                                            <button type="button" class="btn btn-outline-secondary" data-photo-flip title="Mirror photo" aria-label="Mirror photo"><i class="bi bi-symmetry-horizontal" aria-hidden="true"></i></button>
+                                            <button type="button" class="btn btn-outline-secondary" data-photo-reset title="Reset adjustments" aria-label="Reset adjustments"><i class="bi bi-arrow-repeat" aria-hidden="true"></i></button>
+                                        </div>
                                     </div>
                                     <div class="d-flex align-items-center gap-2 mt-2">
-                                        <label class="small text-muted" for="profilePhotoZoom">Image size</label>
+                                        <button type="button" class="btn btn-outline-secondary btn-sm" data-photo-zoom-out aria-label="Zoom out"><i class="bi bi-dash-lg" aria-hidden="true"></i></button>
+                                        <label class="visually-hidden" for="profilePhotoZoom">Image size</label>
                                         <input id="profilePhotoZoom" class="form-range m-0" type="range" data-photo-zoom min="1" max="3" step="0.01" value="1">
+                                        <button type="button" class="btn btn-outline-secondary btn-sm" data-photo-zoom-in aria-label="Zoom in"><i class="bi bi-plus-lg" aria-hidden="true"></i></button>
+                                        <span class="small photo-zoom-value" data-photo-zoom-value>100%</span>
                                     </div>
                                 </div>
-                                <button type="submit" class="btn btn-primary mt-2">Save photo</button>
+                                <button type="submit" class="btn btn-primary mt-3">Save photo</button>
                             </form>
 
                         </div>

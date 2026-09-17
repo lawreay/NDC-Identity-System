@@ -1,5 +1,5 @@
 .photo-upload-editor {
-    max-width: 300px;
+    max-width: 360px;
 }
 
 .photo-upload-stage {
@@ -9,7 +9,7 @@
     overflow: hidden;
     touch-action: none;
     cursor: grab;
-    background-color: #ffffff;
+    background: #1f2937;
 }
 
 .photo-upload-stage.is-dragging {
@@ -32,9 +32,20 @@
     position: absolute;
     z-index: 2;
     box-sizing: border-box;
-    border: 2px solid #0d6efd;
-    box-shadow: 0 0 0 9999px rgb(0 0 0 / 34%);
+    border: 2px solid #ffffff;
+    box-shadow: 0 0 0 9999px rgb(0 0 0 / 52%);
     pointer-events: none;
+}
+
+.photo-crop-frame::before {
+    position: absolute;
+    inset: 0;
+    content: '';
+    background-image:
+        linear-gradient(to right, transparent 33.15%, rgb(255 255 255 / 42%) 33.35%, rgb(255 255 255 / 42%) 33.65%, transparent 33.85%),
+        linear-gradient(to right, transparent 66.15%, rgb(255 255 255 / 42%) 66.35%, rgb(255 255 255 / 42%) 66.65%, transparent 66.85%),
+        linear-gradient(to bottom, transparent 33.15%, rgb(255 255 255 / 42%) 33.35%, rgb(255 255 255 / 42%) 33.65%, transparent 33.85%),
+        linear-gradient(to bottom, transparent 66.15%, rgb(255 255 255 / 42%) 66.35%, rgb(255 255 255 / 42%) 66.65%, transparent 66.85%);
 }
 
 .photo-crop-edge {
@@ -45,34 +56,34 @@
 
 .photo-crop-edge-top,
 .photo-crop-edge-bottom {
-    right: 10px;
-    left: 10px;
-    height: 12px;
+    right: 12px;
+    left: 12px;
+    height: 14px;
     cursor: move;
 }
 
 .photo-crop-edge-top {
-    top: -7px;
+    top: -8px;
 }
 
 .photo-crop-edge-bottom {
-    bottom: -7px;
+    bottom: -8px;
 }
 
 .photo-crop-edge-left,
 .photo-crop-edge-right {
-    top: 10px;
-    bottom: 10px;
-    width: 12px;
+    top: 12px;
+    bottom: 12px;
+    width: 14px;
     cursor: move;
 }
 
 .photo-crop-edge-left {
-    left: -7px;
+    left: -8px;
 }
 
 .photo-crop-edge-right {
-    right: -7px;
+    right: -8px;
 }
 
 .photo-crop-handle {
@@ -82,9 +93,9 @@
     height: 16px;
     padding: 0;
     border: 2px solid #ffffff;
-    border-radius: 50%;
+    border-radius: 3px;
     background: #0d6efd;
-    box-shadow: 0 1px 3px rgb(0 0 0 / 35%);
+    box-shadow: 0 1px 4px rgb(0 0 0 / 45%);
     pointer-events: auto;
 }
 
@@ -122,6 +133,25 @@
     display: none;
 }
 
+.photo-editor-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+}
+
+.photo-editor-toolbar .btn {
+    min-width: 2.25rem;
+}
+
 .photo-upload-editor .form-range {
-    max-width: 190px;
+    max-width: 220px;
+}
+
+.photo-zoom-value {
+    min-width: 3rem;
+    color: var(--bs-secondary-color);
+    font-variant-numeric: tabular-nums;
+    text-align: right;
 }

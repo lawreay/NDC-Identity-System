@@ -22,8 +22,22 @@
                 }
 
                 canvas.toBlob(fallback => fallback ? resolve(fallback) : reject(new Error('Unable to prepare the selected photo.')), 'image/png');
-            }, 'image/webp', 0.88);
+            }, 'image/webp', 0.9);
         });
+    }
+
+    function filenameFromUrl(url, mimeType) {
+        try {
+            const pathname = new URL(url, window.location.href).pathname;
+            const filename = pathname.split('/').pop() || '';
+            if (filename.includes('.')) {
+                return filename;
+            }
+        } catch (error) {
+            // A generated filename below is safe when the URL cannot be parsed.
+        }
+
+        return 'student-photo.' + (mimeType === 'image/png' ? 'png' : 'webp');
     }
 
     function createCropFrame() {
@@ -62,8 +76,16 @@
         const stage = editor.querySelector('[data-photo-stage]');
         const image = editor.querySelector('[data-photo-source]');
         const slider = editor.querySelector('[data-photo-zoom]');
+        const zoomValue = editor.querySelector('[data-photo-zoom-value]');
         const resetButton = editor.querySelector('[data-photo-reset]');
+        const existingButton = editor.parentElement?.querySelector('[data-photo-edit-existing]');
+        const zoomInButton = editor.querySelector('[data-photo-zoom-in]');
+        const zoomOutButton = editor.querySelector('[data-photo-zoom-out]');
+        const rotateLeftButton = editor.querySelector('[data-photo-rotate-left]');
+        const rotateRightButton = editor.querySelector('[data-photo-rotate-right]');
+        const flipButton = editor.querySelector('[data-photo-flip]');
         const modeInputs = Array.from(editor.querySelectorAll('[data-photo-mode]'));
+        const existingPhotoUrl = editor.dataset.photoExistingUrl || '';
 
         if (!input || !form || !stage || !image || !slider) {
             return;
@@ -75,6 +97,8 @@
         const state = {
             loaded: false,
             processed: false,
+            sourceKind: '',
+            shouldSave: false,
             mode: 'crop',
             zoom: 1,
             baseScale: 1,
@@ -86,6 +110,8 @@
             crop: { x: 0, y: 0, width: 0, height: 0 },
             drag: null,
             url: null,
+            originalFile: null,
+            transformed: false,
         };
 
         function dimensions() {
@@ -125,11 +151,22 @@
             state.crop.y = clamp(state.crop.y, 0, Math.max(0, stageSize.height - state.crop.height));
         }
 
+        function zoomBounds() {
+            return {
+                minimum: state.mode === 'crop' ? 1 : 0.25,
+                maximum: 3,
+            };
+        }
+
         function updateSlider() {
-            slider.min = state.mode === 'crop' ? '1' : '0.25';
-            slider.max = '3';
+            const bounds = zoomBounds();
+            slider.min = String(bounds.minimum);
+            slider.max = String(bounds.maximum);
             slider.step = '0.01';
             slider.value = String(state.zoom);
+            if (zoomValue) {
+                zoomValue.textContent = Math.round(state.zoom * 100) + '%';
+            }
         }
 
         function updateImageSize() {
@@ -205,7 +242,12 @@
             stage.classList.add('has-photo');
         }
 
-        function reset() {
+        function markChanged() {
+            state.shouldSave = true;
+            state.processed = false;
+        }
+
+        function reset(markAsChanged = false) {
             if (!state.loaded) {
                 return;
             }
@@ -216,14 +258,17 @@
             state.baseScale = state.mode === 'crop'
                 ? Math.max(scaleArea.width / image.naturalWidth, scaleArea.height / image.naturalHeight)
                 : Math.min(scaleArea.width / image.naturalWidth, scaleArea.height / image.naturalHeight);
-            state.processed = false;
             centreImage();
             render();
+
+            if (markAsChanged) {
+                markChanged();
+            }
         }
 
         function setMode(mode) {
             state.mode = mode === 'fit' ? 'fit' : 'crop';
-            reset();
+            reset(true);
         }
 
         function exportCanvas() {
@@ -245,7 +290,7 @@
             return canvas;
         }
 
-        function loadFile(file) {
+        function loadFile(file, sourceKind = 'new', shouldSave = sourceKind === 'new', preserveOriginal = false) {
             if (!file || !file.type.startsWith('image/')) {
                 return;
             }
@@ -257,11 +302,19 @@
             state.url = URL.createObjectURL(file);
             state.loaded = false;
             state.processed = false;
+            state.sourceKind = sourceKind;
+            state.shouldSave = shouldSave;
             state.crop = { x: 0, y: 0, width: 0, height: 0 };
+            if (!preserveOriginal) {
+                state.originalFile = file;
+                state.transformed = false;
+            } else {
+                state.transformed = true;
+            }
             editor.hidden = false;
             image.onload = () => {
                 state.loaded = true;
-                window.requestAnimationFrame(reset);
+                window.requestAnimationFrame(() => reset(false));
             };
             image.onerror = () => {
                 state.loaded = false;
@@ -270,6 +323,103 @@
                 window.alert('The selected file could not be opened as an image.');
             };
             image.src = state.url;
+        }
+
+        async function loadExistingPhoto() {
+            if (existingPhotoUrl === '') {
+                return;
+            }
+
+            const originalLabel = existingButton ? existingButton.innerHTML : '';
+            if (existingButton) {
+                existingButton.disabled = true;
+                existingButton.innerHTML = '<span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>Loading…';
+            }
+
+            try {
+                const response = await window.fetch(existingPhotoUrl, { credentials: 'same-origin', cache: 'no-store' });
+                if (!response.ok) {
+                    throw new Error('The saved photo could not be loaded.');
+                }
+
+                const blob = await response.blob();
+                if (!blob.type.startsWith('image/')) {
+                    throw new Error('The saved file is not a supported image.');
+                }
+
+                input.value = '';
+                loadFile(new File([blob], filenameFromUrl(existingPhotoUrl, blob.type), { type: blob.type }), 'existing', false);
+            } catch (error) {
+                window.alert(error instanceof Error ? error.message : 'The saved photo could not be loaded.');
+            } finally {
+                if (existingButton) {
+                    existingButton.disabled = false;
+                    existingButton.innerHTML = originalLabel;
+                }
+            }
+        }
+
+        function setZoom(nextZoom, focalPoint = null) {
+            if (!state.loaded) {
+                return;
+            }
+
+            const bounds = zoomBounds();
+            const previousWidth = state.width;
+            const previousHeight = state.height;
+            const previousX = state.x;
+            const previousY = state.y;
+            state.zoom = clamp(nextZoom, bounds.minimum, bounds.maximum);
+            updateImageSize();
+
+            if (focalPoint && previousWidth > 0 && previousHeight > 0) {
+                state.x = focalPoint.x - ((focalPoint.x - previousX) * (state.width / previousWidth));
+                state.y = focalPoint.y - ((focalPoint.y - previousY) * (state.height / previousHeight));
+            }
+
+            markChanged();
+            render();
+        }
+
+        async function transformImage(operation) {
+            if (!state.loaded) {
+                return;
+            }
+
+            const sourceWidth = image.naturalWidth;
+            const sourceHeight = image.naturalHeight;
+            const canvas = document.createElement('canvas');
+            const context = canvas.getContext('2d');
+
+            if (operation === 'rotate-left' || operation === 'rotate-right') {
+                canvas.width = sourceHeight;
+                canvas.height = sourceWidth;
+                if (operation === 'rotate-right') {
+                    context.translate(canvas.width, 0);
+                    context.rotate(Math.PI / 2);
+                } else {
+                    context.translate(0, canvas.height);
+                    context.rotate(-Math.PI / 2);
+                }
+            } else {
+                canvas.width = sourceWidth;
+                canvas.height = sourceHeight;
+                context.translate(canvas.width, 0);
+                context.scale(-1, 1);
+            }
+
+            context.drawImage(image, 0, 0);
+            const buttons = [rotateLeftButton, rotateRightButton, flipButton].filter(Boolean);
+            buttons.forEach(button => { button.disabled = true; });
+
+            try {
+                const blob = await canvasBlob(canvas);
+                loadFile(new File([blob], 'student-photo.webp', { type: blob.type }), state.sourceKind || 'new', true, true);
+            } catch (error) {
+                window.alert(error instanceof Error ? error.message : 'Unable to transform the selected photo.');
+            } finally {
+                buttons.forEach(button => { button.disabled = false; });
+            }
         }
 
         function startDragging(event, kind, handle = '') {
@@ -342,6 +492,7 @@
         }
 
         input.addEventListener('change', () => loadFile(input.files && input.files[0]));
+        existingButton?.addEventListener('click', loadExistingPhoto);
 
         modeInputs.forEach(modeInput => {
             modeInput.addEventListener('change', () => {
@@ -351,13 +502,26 @@
             });
         });
 
-        slider.addEventListener('input', () => {
-            state.zoom = Number(slider.value);
-            state.processed = false;
-            render();
-        });
+        slider.addEventListener('input', () => setZoom(Number(slider.value)));
+        zoomInButton?.addEventListener('click', () => setZoom(state.zoom + 0.1));
+        zoomOutButton?.addEventListener('click', () => setZoom(state.zoom - 0.1));
+        resetButton?.addEventListener('click', () => {
+            state.mode = 'crop';
+            modeInputs.forEach(modeInput => {
+                modeInput.checked = modeInput.value === 'crop';
+            });
+            if (state.transformed && state.originalFile) {
+                loadFile(state.originalFile, state.sourceKind || 'new', state.sourceKind === 'new');
+                return;
+            }
 
-        resetButton?.addEventListener('click', reset);
+            reset(false);
+            state.shouldSave = state.sourceKind === 'new';
+            state.processed = false;
+        });
+        rotateLeftButton?.addEventListener('click', () => transformImage('rotate-left'));
+        rotateRightButton?.addEventListener('click', () => transformImage('rotate-right'));
+        flipButton?.addEventListener('click', () => transformImage('flip'));
 
         cropFrame.querySelectorAll('[data-photo-frame-drag]').forEach(edge => {
             edge.addEventListener('pointerdown', event => startDragging(event, 'frame'));
@@ -389,9 +553,24 @@
                 resizeCrop(state.drag.handle, dx, dy);
             }
 
-            state.processed = false;
+            if (dx !== 0 || dy !== 0) {
+                markChanged();
+            }
             render();
         });
+
+        stage.addEventListener('wheel', event => {
+            if (!state.loaded) {
+                return;
+            }
+
+            event.preventDefault();
+            const bounds = stage.getBoundingClientRect();
+            setZoom(
+                state.zoom * (event.deltaY < 0 ? 1.1 : 0.9),
+                { x: event.clientX - bounds.left, y: event.clientY - bounds.top }
+            );
+        }, { passive: false });
 
         function stopDragging(event) {
             if (state.drag && (!event || state.drag.pointerId === event.pointerId)) {
@@ -405,7 +584,8 @@
         stage.addEventListener('lostpointercapture', stopDragging);
 
         form.addEventListener('submit', async event => {
-            if (!state.loaded || state.processed || !input.files || input.files.length === 0) {
+            const hasInputFile = Boolean(input.files && input.files.length > 0);
+            if (!state.loaded || state.processed || (!hasInputFile && !state.shouldSave)) {
                 return;
             }
 
