@@ -61,14 +61,29 @@ function escape(string $value): string
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
     <link href="assets/app.css" rel="stylesheet">
 </head>
-<body class="bg-light">
-<div class="container py-5">
-    <div class="row justify-content-center">
-        <div class="col-md-6 col-lg-5">
-            <div class="card shadow-sm">
-                <div class="card-body p-4">
-                    <div class="ndc-eyebrow"><i class="bi bi-person-badge-fill me-1" aria-hidden="true"></i>NDC Identity System</div>
-                    <h1 class="h3 mb-1">Sign in</h1>
+<body class="ndc-login-page">
+<main class="ndc-login-shell">
+    <div class="row g-0">
+        <div class="col-lg-6">
+            <section class="ndc-login-aside">
+                <div>
+                    <div class="ndc-brand mb-5"><span class="ndc-brand-mark" aria-hidden="true"><i class="bi bi-person-vcard-fill"></i></span><span>NDC Identity System</span></div>
+                    <div class="ndc-eyebrow text-white-50">Secure identity management</div>
+                    <h1 class="mb-3">Everything your institution needs to issue with confidence.</h1>
+                    <p class="mb-0">Manage student profiles, design professional ID cards, and verify credentials from one trusted workspace.</p>
+                    <div class="ndc-login-bullets">
+                        <div class="ndc-login-bullet"><i class="bi bi-check-circle-fill" aria-hidden="true"></i><span>Fast, accurate student records</span></div>
+                        <div class="ndc-login-bullet"><i class="bi bi-check-circle-fill" aria-hidden="true"></i><span>Printable PDF and PNG ID cards</span></div>
+                        <div class="ndc-login-bullet"><i class="bi bi-check-circle-fill" aria-hidden="true"></i><span>QR-powered public verification</span></div>
+                    </div>
+                </div>
+                <small class="text-white-50">Authorized staff only</small>
+            </section>
+        </div>
+        <div class="col-lg-6">
+            <section class="ndc-login-form">
+                    <div class="ndc-eyebrow"><i class="bi bi-shield-lock-fill me-1" aria-hidden="true"></i>Welcome back</div>
+                    <h2 class="h3 mb-1">Sign in to your workspace</h2>
                     <p class="text-muted mb-4">Use your existing account credentials to continue.</p>
 
                     <?php if ($errors !== []): ?>
@@ -86,22 +101,40 @@ function escape(string $value): string
                         <input type="hidden" name="_csrf" value="<?= escape(Auth::csrfToken()) ?>">
                         <div class="mb-3">
                             <label class="form-label" for="email">Email</label>
-                            <input id="email" type="email" name="email" class="form-control" required autocomplete="email" autofocus>
+                            <div class="input-group">
+                                <span class="input-group-text bg-white"><i class="bi bi-envelope" aria-hidden="true"></i></span>
+                                <input id="email" type="email" name="email" class="form-control" required autocomplete="email" autofocus>
+                            </div>
                         </div>
                         <div class="mb-3">
                             <label class="form-label" for="password">Password</label>
-                            <input id="password" type="password" name="password" class="form-control" required autocomplete="current-password">
+                            <div class="input-group">
+                                <span class="input-group-text bg-white"><i class="bi bi-key" aria-hidden="true"></i></span>
+                                <input id="password" type="password" name="password" class="form-control" required autocomplete="current-password">
+                                <button type="button" class="btn btn-outline-secondary" id="togglePassword" aria-label="Show password"><i class="bi bi-eye" aria-hidden="true"></i></button>
+                            </div>
                         </div>
-                        <button type="submit" class="btn btn-primary w-100"><i class="bi bi-box-arrow-in-right me-1" aria-hidden="true"></i>Sign in</button>
+                        <button type="submit" class="btn btn-primary btn-lg w-100"><i class="bi bi-box-arrow-in-right me-1" aria-hidden="true"></i>Sign in</button>
                     </form>
 
                     <div class="mt-3 text-center">
                         <a href="forgot-password.php">Forgot password?</a>
                     </div>
-                </div>
-            </div>
+            </section>
         </div>
     </div>
-</div>
+</main>
+<script>
+    const passwordInput = document.getElementById('password');
+    const togglePassword = document.getElementById('togglePassword');
+    if (passwordInput && togglePassword) {
+        togglePassword.addEventListener('click', () => {
+            const visible = passwordInput.type === 'text';
+            passwordInput.type = visible ? 'password' : 'text';
+            togglePassword.setAttribute('aria-label', visible ? 'Show password' : 'Hide password');
+            togglePassword.querySelector('i').className = visible ? 'bi bi-eye' : 'bi bi-eye-slash';
+        });
+    }
+</script>
 </body>
 </html>

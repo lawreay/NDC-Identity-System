@@ -212,7 +212,7 @@ if ($template !== null && is_array($template)) {
     <?php endif; ?>
 
     <?php if ($mode === 'list'): ?>
-        <div class="card shadow-sm mb-4">
+    <div class="card shadow-sm mb-4 ndc-section-nav">
             <div class="card-body d-flex justify-content-between align-items-center">
                 <div>
                     <h2 class="h5 mb-1">Templates</h2>

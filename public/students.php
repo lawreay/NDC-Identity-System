@@ -59,9 +59,17 @@ $studentsMissingSurname = array_values(array_filter(
             </div>
         </div>
 
-        <form method="get" action="students.php" class="row g-2 mb-4">
-            <div class="col-md-8">
+        <form method="get" action="students.php" class="row g-2 mb-3">
+            <div class="col-md-6">
                 <input type="text" name="search" class="form-control" value="<?= htmlspecialchars($search, ENT_QUOTES, 'UTF-8') ?>" placeholder="Search by name, number, program, or class">
+            </div>
+            <div class="col-md-2">
+                <label class="visually-hidden" for="statusFilter">Filter by status</label>
+                <select id="statusFilter" class="form-select" aria-label="Filter students by status">
+                    <option value="">All statuses</option>
+                    <option value="active">Active</option>
+                    <option value="inactive">Inactive</option>
+                </select>
             </div>
             <div class="col-md-2">
                 <button type="submit" class="btn btn-primary w-100"><i class="bi bi-search me-1" aria-hidden="true"></i>Search</button>
@@ -70,6 +78,13 @@ $studentsMissingSurname = array_values(array_filter(
                 <a href="students.php" class="btn btn-outline-secondary w-100">Clear</a>
             </div>
         </form>
+
+        <div class="ndc-directory-summary mb-4">
+            <span><strong><?= number_format(count($students)) ?></strong> records</span>
+            <span><i class="bi bi-check-circle-fill text-success me-1" aria-hidden="true"></i><strong><?= number_format(count(array_filter($students, static fn (array $student): bool => strtolower((string) ($student['status'] ?? '')) === 'active'))) ?></strong> active</span>
+            <span class="<?= $studentsMissingSurname !== [] ? 'text-warning-emphasis' : '' ?>"><i class="bi bi-exclamation-triangle-fill me-1" aria-hidden="true"></i><strong><?= number_format(count($studentsMissingSurname)) ?></strong> missing surname</span>
+            <span class="ms-auto" id="selectedStudentSummary">0 selected</span>
+        </div>
 
         <?php if ($errorMessage): ?>
             <div class="alert alert-danger"><?= htmlspecialchars($errorMessage, ENT_QUOTES, 'UTF-8') ?></div>
@@ -86,7 +101,7 @@ $studentsMissingSurname = array_values(array_filter(
             <?php endif; ?>
             <form method="post" action="export-cards-bulk.php" id="bulkExportForm">
                 <input type="hidden" name="_csrf" value="<?= htmlspecialchars(Auth::csrfToken(), ENT_QUOTES, 'UTF-8') ?>">
-                <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+                <div class="ndc-bulk-toolbar d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
                     <small class="text-muted">Select students, then download both sides of each ID card. Maximum 250 students per export.</small>
                     <div class="d-flex flex-wrap align-items-center gap-2">
                         <label class="visually-hidden" for="bulkTemplate">ID card template</label>
@@ -99,8 +114,8 @@ $studentsMissingSurname = array_values(array_filter(
                             <?php endforeach; ?>
                         </select>
                         <div class="btn-group">
-                            <button type="submit" name="export_format" value="pdf" class="btn btn-primary"><i class="bi bi-file-earmark-pdf me-1" aria-hidden="true"></i>Export PDF</button>
-                            <button type="submit" name="export_format" value="png_zip" class="btn btn-outline-primary"><i class="bi bi-file-earmark-zip me-1" aria-hidden="true"></i>Export PNG ZIP</button>
+                            <button type="submit" name="export_format" value="pdf" class="btn btn-primary js-bulk-export" disabled><i class="bi bi-file-earmark-pdf me-1" aria-hidden="true"></i>Export PDF</button>
+                            <button type="submit" name="export_format" value="png_zip" class="btn btn-outline-primary js-bulk-export" disabled><i class="bi bi-file-earmark-zip me-1" aria-hidden="true"></i>Export PNG ZIP</button>
                         </div>
                     </div>
                 </div>
@@ -123,7 +138,7 @@ $studentsMissingSurname = array_values(array_filter(
                             $studentName = trim((string) ($student['first_name'] ?? '') . ' ' . (string) ($student['last_name'] ?? ''));
                             $missingSurname = trim((string) ($student['last_name'] ?? '')) === '';
                             ?>
-                            <tr class="js-student-row<?= $missingSurname ? ' table-warning' : '' ?>">
+                            <tr class="js-student-row<?= $missingSurname ? ' table-warning' : '' ?>" data-student-status="<?= htmlspecialchars(strtolower((string) ($student['status'] ?? '')), ENT_QUOTES, 'UTF-8') ?>">
                                 <td><input type="checkbox" class="form-check-input js-student-select" name="student_ids[]" value="<?= (int) ($student['id'] ?? 0) ?>" aria-label="Select <?= htmlspecialchars(trim((string) ($student['first_name'] ?? '') . ' ' . (string) ($student['last_name'] ?? '')), ENT_QUOTES, 'UTF-8') ?>"></td>
                                 <td><?= htmlspecialchars((string) ($student['student_number'] ?? ''), ENT_QUOTES, 'UTF-8') ?></td>
                                 <td>
@@ -150,9 +165,22 @@ $studentsMissingSurname = array_values(array_filter(
 <script>
     const selectAllStudents = document.getElementById('selectAllStudents');
     const studentSelections = document.querySelectorAll('.js-student-select');
+    const selectedStudentSummary = document.getElementById('selectedStudentSummary');
+    const statusFilter = document.getElementById('statusFilter');
+    const studentRows = document.querySelectorAll('.js-student-row');
+    const bulkExportForm = document.getElementById('bulkExportForm');
+    const bulkExportButtons = document.querySelectorAll('.js-bulk-export');
+    const updateSelectionSummary = () => {
+        const selected = [...studentSelections].filter((item) => item.checked).length;
+        if (selectedStudentSummary) selectedStudentSummary.textContent = `${selected} selected`;
+        bulkExportButtons.forEach((button) => { button.disabled = selected === 0; });
+    };
     if (selectAllStudents) {
         selectAllStudents.addEventListener('change', () => {
-            studentSelections.forEach((checkbox) => { checkbox.checked = selectAllStudents.checked; });
+            studentSelections.forEach((checkbox) => {
+                if (checkbox.closest('.js-student-row')?.hidden !== true) checkbox.checked = selectAllStudents.checked;
+            });
+            updateSelectionSummary();
         });
         studentSelections.forEach((checkbox) => {
             checkbox.closest('.js-student-row')?.classList.toggle('ndc-selected-row', checkbox.checked);
@@ -160,9 +188,36 @@ $studentsMissingSurname = array_values(array_filter(
                 checkbox.closest('.js-student-row')?.classList.toggle('ndc-selected-row', checkbox.checked);
                 selectAllStudents.checked = studentSelections.length > 0 && [...studentSelections].every((item) => item.checked);
                 selectAllStudents.indeterminate = [...studentSelections].some((item) => item.checked) && !selectAllStudents.checked;
+                updateSelectionSummary();
             });
         });
     }
+    if (bulkExportForm) {
+        bulkExportForm.addEventListener('submit', (event) => {
+            if ([...studentSelections].every((item) => !item.checked)) {
+                event.preventDefault();
+                window.alert('Select at least one student to export.');
+            }
+        });
+    }
+    if (statusFilter) {
+        statusFilter.addEventListener('change', () => {
+            const value = statusFilter.value;
+            studentRows.forEach((row) => {
+                row.hidden = value !== '' && row.dataset.studentStatus !== value;
+                if (row.hidden) {
+                    const checkbox = row.querySelector('.js-student-select');
+                    if (checkbox) checkbox.checked = false;
+                }
+            });
+            if (selectAllStudents) {
+                selectAllStudents.checked = false;
+                selectAllStudents.indeterminate = false;
+            }
+            updateSelectionSummary();
+        });
+    }
+    updateSelectionSummary();
 </script>
 </body>
 </html>

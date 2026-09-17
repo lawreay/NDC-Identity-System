@@ -104,7 +104,7 @@ function escape(string $value): string
         <a href="settings.php" class="btn btn-outline-secondary">Back to settings</a>
     </div>
 
-    <div class="card shadow-sm mb-4">
+    <div class="card shadow-sm mb-4 ndc-section-nav">
         <div class="card-body">
             <div class="d-flex flex-wrap gap-2">
                 <a href="settings.php" class="btn btn-outline-secondary">App Settings</a>

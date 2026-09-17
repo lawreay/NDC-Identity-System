@@ -1,2 +1,2 @@
 <?php
-require __DIR__ . '/students.php';
+require __DIR__ . '/dashboard.php';

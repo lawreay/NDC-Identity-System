@@ -3,6 +3,7 @@
 namespace App;
 
 use PDO;
+use PDOException;
 use RuntimeException;
 
 /**
@@ -338,8 +339,22 @@ final class DatabaseDumpService
             return;
         }
 
-        $this->connection->exec($statement);
-        $executed++;
+        try {
+            $this->connection->exec($statement);
+            $executed++;
+        } catch (PDOException $exception) {
+            // Older copies of the history migration used an unconditional
+            // DROP INDEX. Treat a missing index as already-completed work so
+            // those files remain safe to restore through the web importer.
+            $errorCode = (int) ($exception->errorInfo[1] ?? 0);
+            $isMissingIndex = $errorCode === 1091
+                || str_contains(strtolower($exception->getMessage()), "can't drop index");
+            if ($isMissingIndex && preg_match('/^DROP\s+(?:INDEX|KEY)\b/i', $statement) === 1) {
+                return;
+            }
+
+            throw $exception;
+        }
     }
 
     /**

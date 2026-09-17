@@ -192,7 +192,7 @@ $signaturePreview = getPreviewSrc($settings['principal_signature_path'] ?? $sett
         <a href="students.php" class="btn btn-outline-secondary">Back to students</a>
     </div>
 
-    <div class="card shadow-sm mb-4">
+    <div class="card shadow-sm mb-4 ndc-section-nav">
         <div class="card-body">
             <div class="d-flex flex-wrap gap-2">
                 <a href="settings.php" class="btn btn-primary">App Settings</a>
@@ -219,112 +219,61 @@ $signaturePreview = getPreviewSrc($settings['principal_signature_path'] ?? $sett
         </div>
     <?php endif; ?>
 
+    <div class="ndc-settings-tabs mb-3" role="tablist" aria-label="Settings sections">
+        <button type="button" class="ndc-settings-tab is-active" role="tab" aria-selected="true" data-settings-tab="organization"><i class="bi bi-building me-1" aria-hidden="true"></i>Organization</button>
+        <button type="button" class="ndc-settings-tab" role="tab" aria-selected="false" data-settings-tab="branding"><i class="bi bi-palette me-1" aria-hidden="true"></i>Branding & card</button>
+        <button type="button" class="ndc-settings-tab" role="tab" aria-selected="false" data-settings-tab="verification"><i class="bi bi-qr-code-scan me-1" aria-hidden="true"></i>Verification</button>
+        <button type="button" class="ndc-settings-tab" role="tab" aria-selected="false" data-settings-tab="security"><i class="bi bi-shield-lock me-1" aria-hidden="true"></i>Security</button>
+    </div>
+
     <form method="post" enctype="multipart/form-data">
         <input type="hidden" name="_csrf" value="<?= escape(Auth::csrfToken()) ?>">
         <input type="hidden" name="action" value="save_settings">
-        <div class="row g-3">
-            <div class="col-12">
-                <h2 class="h5">Change Password</h2>
-                <p class="text-muted mb-3">Leave password fields blank if you do not want to change your password.</p>
+        <section class="ndc-settings-panel" data-settings-panel="organization" role="tabpanel">
+            <div class="row g-3">
+                <div class="col-12"><h2 class="h5 mb-1">Institution details</h2><p class="text-muted mb-0">These details appear on student records and identity cards.</p></div>
+                <div class="col-md-6"><label class="form-label">School Name</label><input type="text" name="school_name" class="form-control" value="<?= escape($settings['school_name'] ?? $settings['organization_name'] ?? '') ?>"></div>
+                <div class="col-md-6"><label class="form-label">Campus Name</label><input type="text" name="campus_name" class="form-control" value="<?= escape($settings['campus_name'] ?? '') ?>"></div>
+                <div class="col-md-6"><label class="form-label">Organization Name</label><input type="text" name="organization_name" class="form-control" value="<?= escape($settings['organization_name'] ?? '') ?>"></div>
+                <div class="col-md-6"><label class="form-label">Organization Address</label><input type="text" name="organization_address" class="form-control" value="<?= escape($settings['organization_address'] ?? '') ?>"></div>
+                <div class="col-md-6"><label class="form-label">Organization Phone</label><input type="text" name="organization_phone" class="form-control" value="<?= escape($settings['organization_phone'] ?? '') ?>"></div>
+                <div class="col-md-6"><label class="form-label">Organization Email</label><input type="email" name="organization_email" class="form-control" value="<?= escape($settings['organization_email'] ?? '') ?>"></div>
+                <div class="col-md-6"><label class="form-label">Organization Website</label><input type="text" name="organization_website" class="form-control" value="<?= escape($settings['organization_website'] ?? '') ?>"></div>
+                <div class="col-md-6"><label class="form-label">Academic Programs</label><textarea name="academic_programs" class="form-control" rows="4" placeholder="Enter one program per line"><?= escape($settings['academic_programs'] ?? '') ?></textarea><div class="form-text">These programs appear when adding or editing students.</div></div>
             </div>
-            <div class="col-md-6">
-                <label class="form-label">New Password</label>
-                <input type="password" name="new_password" class="form-control" autocomplete="new-password">
+        </section>
+
+        <section class="ndc-settings-panel" data-settings-panel="branding" role="tabpanel" hidden>
+            <div class="row g-3">
+                <div class="col-12"><h2 class="h5 mb-1">Card theme</h2><p class="text-muted mb-0">These colors are used by card previews and PDF/PNG exports.</p></div>
+                <div class="col-md-4"><label class="form-label" for="primaryColor">Primary Color</label><input id="primaryColor" type="color" name="primary_color" class="form-control form-control-color" value="<?= escape($theme['primary_color']) ?>" title="Choose the primary card color"></div>
+                <div class="col-md-4"><label class="form-label" for="secondaryColor">Secondary Color</label><input id="secondaryColor" type="color" name="secondary_color" class="form-control form-control-color" value="<?= escape($theme['secondary_color']) ?>" title="Choose the secondary card color"></div>
+                <div class="col-md-4"><label class="form-label" for="accentColor">Accent Color</label><input id="accentColor" type="color" name="accent_color" class="form-control form-control-color" value="<?= escape($theme['accent_color']) ?>" title="Choose the accent card color"></div>
+                <div class="col-md-6"><label class="form-label">Authorized Signatory Name</label><input type="text" name="principal_signature_name" class="form-control" value="<?= escape($settings['principal_signature_name'] ?? $settings['authorized_name'] ?? '') ?>"></div>
+                <div class="col-md-6"><label class="form-label">School Logo Path</label><input type="text" name="organization_logo_path" class="form-control" value="<?= escape($settings['organization_logo_path'] ?? '') ?>" placeholder="uploads/logo.png or /assets/logo.svg"></div>
+                <div class="col-md-6"><label class="form-label">Upload School Logo</label><input type="file" name="organization_logo_file" class="form-control" accept="image/png,image/jpeg,image/webp"><?php if ($logoPreview): ?><div class="mt-2"><img src="<?= escape($logoPreview) ?>" alt="Current school logo" class="img-fluid rounded border" style="max-height:120px;"><div class="text-muted small mt-1">Current logo preview</div></div><?php endif; ?></div>
+                <div class="col-md-6"><label class="form-label">Authorized Signature Path</label><input type="text" name="principal_signature_path" class="form-control" value="<?= escape($settings['principal_signature_path'] ?? $settings['authorized_signature_path'] ?? '') ?>" placeholder="uploads/signature.png"></div>
+                <div class="col-md-6"><label class="form-label">Upload Authorized Signature</label><input type="file" name="authorized_signature_file" class="form-control" accept="image/png,image/jpeg,image/webp"><?php if ($signaturePreview): ?><div class="mt-2"><img src="<?= escape($signaturePreview) ?>" alt="Current authorized signature" class="img-fluid rounded border" style="max-height:120px;"><div class="text-muted small mt-1">Current signature preview</div></div><?php endif; ?></div>
             </div>
-            <div class="col-md-6">
-                <label class="form-label">Confirm New Password</label>
-                <input type="password" name="confirm_password" class="form-control" autocomplete="new-password">
+        </section>
+
+        <section class="ndc-settings-panel" data-settings-panel="verification" role="tabpanel" hidden>
+            <div class="row g-3">
+                <div class="col-12"><h2 class="h5 mb-1">Public verification</h2><p class="text-muted mb-0">The QR code on each card opens this public endpoint with a secure card GUID.</p></div>
+                <div class="col-lg-8"><label class="form-label" for="verificationEndpoint">Public Verification URL</label><input id="verificationEndpoint" type="url" name="verification_endpoint" class="form-control" value="<?= escape($settings['verification_endpoint'] ?? '') ?>" placeholder="https://identity.example.org/verify.php"><div class="form-text">This page must be publicly accessible outside the administrator login.</div></div>
             </div>
-            <div class="col-md-6">
-                <label class="form-label">School Name</label>
-                <input type="text" name="school_name" class="form-control" value="<?= escape($settings['school_name'] ?? $settings['organization_name'] ?? '') ?>">
+        </section>
+
+        <section class="ndc-settings-panel" data-settings-panel="security" role="tabpanel" hidden>
+            <div class="row g-3">
+                <div class="col-12"><h2 class="h5 mb-1">Change password</h2><p class="text-muted mb-0">Leave both fields blank to keep your current password.</p></div>
+                <div class="col-md-6"><label class="form-label" for="newPassword">New Password</label><input id="newPassword" type="password" name="new_password" class="form-control" autocomplete="new-password" minlength="8"><div class="form-text">Use at least 8 characters.</div></div>
+                <div class="col-md-6"><label class="form-label" for="confirmPassword">Confirm New Password</label><input id="confirmPassword" type="password" name="confirm_password" class="form-control" autocomplete="new-password" minlength="8"></div>
             </div>
-            <div class="col-md-6">
-                <label class="form-label">Campus Name</label>
-                <input type="text" name="campus_name" class="form-control" value="<?= escape($settings['campus_name'] ?? '') ?>">
-            </div>
-            <div class="col-md-6">
-                <label class="form-label">Organization Name</label>
-                <input type="text" name="organization_name" class="form-control" value="<?= escape($settings['organization_name'] ?? '') ?>">
-            </div>
-            <div class="col-md-6">
-                <label class="form-label">Academic Programs</label>
-                <textarea name="academic_programs" class="form-control" rows="4" placeholder="Enter one program per line"><?= escape($settings['academic_programs'] ?? '') ?></textarea>
-                <div class="form-text">These programs appear as options when adding or editing students.</div>
-            </div>
-            <div class="col-12">
-                <h2 class="h5 mb-1">Card Theme</h2>
-                <p class="text-muted mb-0">These colors are used by the card preview and PDF/PNG exports.</p>
-            </div>
-            <div class="col-md-4">
-                <label class="form-label" for="primaryColor">Primary Color</label>
-                <input id="primaryColor" type="color" name="primary_color" class="form-control form-control-color" value="<?= escape($theme['primary_color']) ?>" title="Choose the primary card color">
-            </div>
-            <div class="col-md-4">
-                <label class="form-label" for="secondaryColor">Secondary Color</label>
-                <input id="secondaryColor" type="color" name="secondary_color" class="form-control form-control-color" value="<?= escape($theme['secondary_color']) ?>" title="Choose the secondary card color">
-            </div>
-            <div class="col-md-4">
-                <label class="form-label" for="accentColor">Accent Color</label>
-                <input id="accentColor" type="color" name="accent_color" class="form-control form-control-color" value="<?= escape($theme['accent_color']) ?>" title="Choose the accent card color">
-            </div>
-            <div class="col-md-6">
-                <label class="form-label">Authorized Signatory Name</label>
-                <input type="text" name="principal_signature_name" class="form-control" value="<?= escape($settings['principal_signature_name'] ?? $settings['authorized_name'] ?? '') ?>">
-            </div>
-            <div class="col-md-6">
-                <label class="form-label">Organization Address</label>
-                <input type="text" name="organization_address" class="form-control" value="<?= escape($settings['organization_address'] ?? '') ?>">
-            </div>
-            <div class="col-md-6">
-                <label class="form-label">Organization Phone</label>
-                <input type="text" name="organization_phone" class="form-control" value="<?= escape($settings['organization_phone'] ?? '') ?>">
-            </div>
-            <div class="col-md-6">
-                <label class="form-label">Organization Email</label>
-                <input type="email" name="organization_email" class="form-control" value="<?= escape($settings['organization_email'] ?? '') ?>">
-            </div>
-            <div class="col-md-6">
-                <label class="form-label">Organization Website</label>
-                <input type="text" name="organization_website" class="form-control" value="<?= escape($settings['organization_website'] ?? '') ?>">
-            </div>
-            <div class="col-md-6">
-                <label class="form-label">Public Verification URL</label>
-                <input type="url" name="verification_endpoint" class="form-control" value="<?= escape($settings['verification_endpoint'] ?? '') ?>" placeholder="https://identity.example.org/verify.php">
-                <div class="form-text">The QR code links here with a secure card GUID. This page must be publicly accessible.</div>
-            </div>
-            <div class="col-md-6">
-                <label class="form-label">School Logo Path</label>
-                <input type="text" name="organization_logo_path" class="form-control" value="<?= escape($settings['organization_logo_path'] ?? '') ?>" placeholder="uploads/logo.png or /assets/logo.svg">
-            </div>
-            <div class="col-md-6">
-                <label class="form-label">Upload School Logo</label>
-                <input type="file" name="organization_logo_file" class="form-control" accept="image/png,image/jpeg,image/webp">
-                <?php if ($logoPreview): ?>
-                    <div class="mt-2">
-                        <img src="<?= escape($logoPreview) ?>" alt="Current school logo" class="img-fluid rounded border" style="max-height:120px;">
-                        <div class="text-muted small mt-1">Current logo preview</div>
-                    </div>
-                <?php endif; ?>
-            </div>
-            <div class="col-md-6">
-                <label class="form-label">Authorized Signature Path</label>
-                <input type="text" name="principal_signature_path" class="form-control" value="<?= escape($settings['principal_signature_path'] ?? $settings['authorized_signature_path'] ?? '') ?>" placeholder="uploads/signature.png">
-            </div>
-            <div class="col-md-6">
-                <label class="form-label">Upload Authorized Signature</label>
-                <input type="file" name="authorized_signature_file" class="form-control" accept="image/png,image/jpeg,image/webp">
-                <?php if ($signaturePreview): ?>
-                    <div class="mt-2">
-                        <img src="<?= escape($signaturePreview) ?>" alt="Current authorized signature" class="img-fluid rounded border" style="max-height:120px;">
-                        <div class="text-muted small mt-1">Current signature preview</div>
-                    </div>
-                <?php endif; ?>
-            </div>
-        </div>
+        </section>
 
         <div class="mt-4">
-            <button type="submit" class="btn btn-primary">Save Settings</button>
+            <button type="submit" class="btn btn-primary"><i class="bi bi-check2-circle me-1" aria-hidden="true"></i>Save settings</button>
         </div>
     </form>
 
@@ -344,5 +293,18 @@ $signaturePreview = getPreviewSrc($settings['principal_signature_path'] ?? $sett
         </div>
     <?php endif; ?>
 </div>
+<script>
+    const settingsTabs = document.querySelectorAll('[data-settings-tab]');
+    const settingsPanels = document.querySelectorAll('[data-settings-panel]');
+    settingsTabs.forEach((tab) => tab.addEventListener('click', () => {
+        const target = tab.dataset.settingsTab;
+        settingsTabs.forEach((item) => {
+            const selected = item === tab;
+            item.classList.toggle('is-active', selected);
+            item.setAttribute('aria-selected', selected ? 'true' : 'false');
+        });
+        settingsPanels.forEach((panel) => { panel.hidden = panel.dataset.settingsPanel !== target; });
+    }));
+</script>
 </body>
 </html>
