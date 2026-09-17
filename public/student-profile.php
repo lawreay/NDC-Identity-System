@@ -104,9 +104,19 @@ if ($student && $cardRepository instanceof CardRepository) {
     }
 }
 
+function studentPhotoUrl(string $photoPath): string
+{
+    $normalizedPath = str_replace('\\', '/', ltrim(trim($photoPath), '/'));
+    if (!str_starts_with($normalizedPath, 'uploads/student_photos/')) {
+        return '';
+    }
+
+    return is_file(__DIR__ . '/' . $normalizedPath) ? $normalizedPath : '';
+}
+
 $photoPath = $student['photo_path'] ?? '';
-$hasPhoto = is_string($photoPath) && trim($photoPath) !== '';
-$photoUrl = $hasPhoto ? '/' . ltrim($photoPath, '/') : '';
+$photoUrl = studentPhotoUrl(is_string($photoPath) ? $photoPath : '');
+$hasPhoto = $photoUrl !== '';
 $fullName = trim(((string) ($student['first_name'] ?? '')) . ' ' . ((string) ($student['last_name'] ?? '')));
 $notice = '';
 if (isset($_GET['created'])) {
@@ -173,7 +183,9 @@ if (isset($_GET['created'])) {
                     <div class="row g-4 align-items-start">
                         <div class="col-md-4">
                             <?php if ($hasPhoto): ?>
-                                <img src="<?= htmlspecialchars($photoUrl, ENT_QUOTES, 'UTF-8') ?>" alt="Student photo" class="img-fluid rounded border" style="max-height: 320px; object-fit: cover; width: 100%;">
+                                <div class="student-profile-photo-preview">
+                                    <img src="<?= htmlspecialchars($photoUrl, ENT_QUOTES, 'UTF-8') ?>" alt="Student photo">
+                                </div>
                             <?php else: ?>
                                 <div class="border rounded d-flex flex-column justify-content-center align-items-center text-center p-4 bg-light" style="min-height: 280px;">
                                     <div class="display-6 text-muted mb-2"></div>
@@ -195,6 +207,10 @@ if (isset($_GET['created'])) {
                                 <div class="photo-upload-editor mt-3" data-photo-editor data-input-id="profilePhoto" data-photo-existing-url="<?= htmlspecialchars($photoUrl, ENT_QUOTES, 'UTF-8') ?>" hidden>
                                     <div class="photo-upload-stage border rounded" data-photo-stage>
                                         <img data-photo-source alt="Selected student photo">
+                                    </div>
+                                    <div class="photo-output-preview mt-3" data-photo-output-preview-wrap hidden>
+                                        <div class="small fw-semibold mb-1">Final ID photo preview</div>
+                                        <img data-photo-output-preview alt="Exact photo that will be saved and shown on the profile">
                                     </div>
                                     <div class="form-text mt-2">Drag the photo to position it. Drag the frame or its corners to adjust the 4:5 ID-card crop. Use the mouse wheel to zoom.</div>
                                     <div class="photo-editor-toolbar mt-3">

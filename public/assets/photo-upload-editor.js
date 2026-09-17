@@ -77,6 +77,8 @@
         const image = editor.querySelector('[data-photo-source]');
         const slider = editor.querySelector('[data-photo-zoom]');
         const zoomValue = editor.querySelector('[data-photo-zoom-value]');
+        const outputPreview = editor.querySelector('[data-photo-output-preview]');
+        const outputPreviewWrap = editor.querySelector('[data-photo-output-preview-wrap]');
         const resetButton = editor.querySelector('[data-photo-reset]');
         const existingButton = editor.parentElement?.querySelector('[data-photo-edit-existing]');
         const zoomInButton = editor.querySelector('[data-photo-zoom-in]');
@@ -112,6 +114,7 @@
             url: null,
             originalFile: null,
             transformed: false,
+            previewFrame: 0,
         };
 
         function dimensions() {
@@ -224,6 +227,22 @@
             cropFrame.style.height = state.crop.height + 'px';
         }
 
+        function queueOutputPreview() {
+            if (!outputPreview || !outputPreviewWrap || state.previewFrame) {
+                return;
+            }
+
+            state.previewFrame = window.requestAnimationFrame(() => {
+                state.previewFrame = 0;
+                try {
+                    outputPreview.src = exportCanvas().toDataURL('image/webp', 0.82);
+                    outputPreviewWrap.hidden = false;
+                } catch (error) {
+                    outputPreviewWrap.hidden = true;
+                }
+            });
+        }
+
         function render() {
             if (!state.loaded) {
                 return;
@@ -240,6 +259,7 @@
             renderCropFrame();
             stage.classList.toggle('is-fit', state.mode === 'fit');
             stage.classList.add('has-photo');
+            queueOutputPreview();
         }
 
         function markChanged() {
@@ -305,6 +325,14 @@
             state.sourceKind = sourceKind;
             state.shouldSave = shouldSave;
             state.crop = { x: 0, y: 0, width: 0, height: 0 };
+            if (state.previewFrame) {
+                window.cancelAnimationFrame(state.previewFrame);
+                state.previewFrame = 0;
+            }
+            if (outputPreview && outputPreviewWrap) {
+                outputPreview.removeAttribute('src');
+                outputPreviewWrap.hidden = true;
+            }
             if (!preserveOriginal) {
                 state.originalFile = file;
                 state.transformed = false;

@@ -128,6 +128,16 @@ function escape(string $value): string
     return htmlspecialchars($value, ENT_QUOTES, 'UTF-8');
 }
 
+function studentPhotoUrl(string $photoPath): string
+{
+    $normalizedPath = str_replace('\\', '/', ltrim(trim($photoPath), '/'));
+    if (!str_starts_with($normalizedPath, 'uploads/student_photos/')) {
+        return '';
+    }
+
+    return is_file(__DIR__ . '/' . $normalizedPath) ? $normalizedPath : '';
+}
+
 /**
  * @return array<int, string>
  */
@@ -161,7 +171,7 @@ if ($billingCategory !== '') {
     $form['billing_category'] = $billingCategory;
 }
 $existingPhotoUrl = $isEdit && is_array($student) && !empty($student['photo_path'])
-    ? '/' . ltrim((string) $student['photo_path'], '/')
+    ? studentPhotoUrl((string) $student['photo_path'])
     : '';
 ?><!DOCTYPE html>
 <html lang="en">
@@ -288,7 +298,7 @@ $existingPhotoUrl = $isEdit && is_array($student) && !empty($student['photo_path
                 <div class="col-md-8">
                     <label class="form-label" for="photo">Choose a new photo</label>
                     <input id="photo" type="file" name="photo" class="form-control" accept="image/png,image/jpeg,image/webp" data-photo-input>
-                    <?php if ($isEdit && !empty($student['photo_path'])): ?>
+                    <?php if ($existingPhotoUrl !== ''): ?>
                         <div class="d-flex flex-wrap align-items-center gap-2 mt-2">
                             <span class="form-text m-0">Leave blank to keep the current photo.</span>
                             <button type="button" class="btn btn-outline-primary btn-sm" data-photo-edit-existing>
@@ -299,6 +309,10 @@ $existingPhotoUrl = $isEdit && is_array($student) && !empty($student['photo_path
                     <div class="photo-upload-editor mt-3" data-photo-editor data-input-id="photo" data-photo-existing-url="<?= escape($existingPhotoUrl) ?>" hidden>
                         <div class="photo-upload-stage border rounded" data-photo-stage>
                             <img data-photo-source alt="Selected student photo">
+                        </div>
+                        <div class="photo-output-preview mt-3" data-photo-output-preview-wrap hidden>
+                            <div class="small fw-semibold mb-1">Final ID photo preview</div>
+                            <img data-photo-output-preview alt="Exact photo that will be saved and shown on the profile">
                         </div>
                         <div class="form-text mt-2">Drag the photo to position it. Drag the frame or its corners to adjust the 4:5 ID-card crop. Use the mouse wheel to zoom.</div>
                         <div class="photo-editor-toolbar mt-3">
