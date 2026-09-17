@@ -12,12 +12,12 @@
     background-color: #ffffff;
 }
 
-.photo-upload-stage.is-fit {
-    cursor: default;
-}
-
 .photo-upload-stage.is-dragging {
     cursor: grabbing;
+}
+
+.photo-upload-stage.is-resizing {
+    cursor: nwse-resize;
 }
 
 .photo-upload-stage img {
@@ -26,6 +26,100 @@
     max-width: none;
     user-select: none;
     -webkit-user-drag: none;
+}
+
+.photo-crop-frame {
+    position: absolute;
+    z-index: 2;
+    box-sizing: border-box;
+    border: 2px solid #0d6efd;
+    box-shadow: 0 0 0 9999px rgb(0 0 0 / 34%);
+    pointer-events: none;
+}
+
+.photo-crop-edge {
+    position: absolute;
+    display: block;
+    pointer-events: auto;
+}
+
+.photo-crop-edge-top,
+.photo-crop-edge-bottom {
+    right: 10px;
+    left: 10px;
+    height: 12px;
+    cursor: move;
+}
+
+.photo-crop-edge-top {
+    top: -7px;
+}
+
+.photo-crop-edge-bottom {
+    bottom: -7px;
+}
+
+.photo-crop-edge-left,
+.photo-crop-edge-right {
+    top: 10px;
+    bottom: 10px;
+    width: 12px;
+    cursor: move;
+}
+
+.photo-crop-edge-left {
+    left: -7px;
+}
+
+.photo-crop-edge-right {
+    right: -7px;
+}
+
+.photo-crop-handle {
+    position: absolute;
+    z-index: 1;
+    width: 16px;
+    height: 16px;
+    padding: 0;
+    border: 2px solid #ffffff;
+    border-radius: 50%;
+    background: #0d6efd;
+    box-shadow: 0 1px 3px rgb(0 0 0 / 35%);
+    pointer-events: auto;
+}
+
+.photo-crop-handle-nw,
+.photo-crop-handle-se {
+    cursor: nwse-resize;
+}
+
+.photo-crop-handle-ne,
+.photo-crop-handle-sw {
+    cursor: nesw-resize;
+}
+
+.photo-crop-handle-nw {
+    top: -9px;
+    left: -9px;
+}
+
+.photo-crop-handle-ne {
+    top: -9px;
+    right: -9px;
+}
+
+.photo-crop-handle-se {
+    right: -9px;
+    bottom: -9px;
+}
+
+.photo-crop-handle-sw {
+    bottom: -9px;
+    left: -9px;
+}
+
+.photo-upload-stage:not(.has-photo) .photo-crop-frame {
+    display: none;
 }
 
 .photo-upload-editor .form-range {

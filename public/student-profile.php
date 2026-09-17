@@ -191,6 +191,7 @@ if (isset($_GET['created'])) {
                                     <div class="photo-upload-stage border rounded" data-photo-stage>
                                         <img data-photo-source alt="Selected student photo">
                                     </div>
+                                    <div class="form-text mt-2">Drag the photo to position it. Drag the blue border to move the crop area, or drag a blue corner to resize it.</div>
                                     <div class="d-flex flex-wrap align-items-center gap-2 mt-2">
                                         <div class="btn-group btn-group-sm" role="group" aria-label="Photo framing mode">
                                             <input id="profilePhotoCrop" class="btn-check" type="radio" name="profile_photo_mode" value="crop" data-photo-mode checked>
@@ -201,7 +202,7 @@ if (isset($_GET['created'])) {
                                         <button type="button" class="btn btn-outline-secondary btn-sm" data-photo-reset>Reset</button>
                                     </div>
                                     <div class="d-flex align-items-center gap-2 mt-2">
-                                        <label class="small text-muted" for="profilePhotoZoom">Zoom</label>
+                                        <label class="small text-muted" for="profilePhotoZoom">Image size</label>
                                         <input id="profilePhotoZoom" class="form-range m-0" type="range" data-photo-zoom min="1" max="3" step="0.01" value="1">
                                     </div>
                                 </div>
