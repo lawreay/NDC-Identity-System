@@ -7,19 +7,27 @@ require_once __DIR__ . '/../app/Services/CardVerificationService.php';
 
 use App\Services\CardVerificationService;
 
-$guid = strtolower(trim((string) ($_GET['guid'] ?? '')));
+$guid = strtolower(trim((string) ($_GET['guid'] ?? $_GET['id'] ?? $_GET['card'] ?? '')));
 $result = ['state' => 'INVALID', 'card' => null];
 $organizationName = 'NDC Identity System';
 $error = '';
 
 try {
     $connection = Database::getConnection();
-    $settings = (new SettingsRepository($connection))->getAll();
-    $organizationName = trim((string) ($settings['organization_name'] ?? '')) ?: $organizationName;
+
+    try {
+        $settings = (new SettingsRepository($connection))->getAll();
+        $organizationName = trim((string) ($settings['organization_name'] ?? '')) ?: $organizationName;
+    } catch (Throwable $settingsException) {
+        error_log('Card verification settings lookup failed: ' . $settingsException->getMessage() . ' in ' . $settingsException->getFile() . ':' . $settingsException->getLine());
+    }
+
     $result = (new CardVerificationService(new CardRepository($connection)))->verify($guid);
 } catch (Throwable $exception) {
     http_response_code(503);
-    error_log('Card verification failed for GUID ' . ($guid !== '' ? $guid : '[missing]') . ': ' . $exception->getMessage() . ' in ' . $exception->getFile() . ':' . $exception->getLine());
+    $previous = $exception->getPrevious();
+    $previousMessage = $previous instanceof Throwable ? ' Previous: ' . $previous->getMessage() : '';
+    error_log('Card verification failed for GUID ' . ($guid !== '' ? $guid : '[missing]') . ': ' . $exception->getMessage() . $previousMessage . ' in ' . $exception->getFile() . ':' . $exception->getLine());
     $error = 'Verification is temporarily unavailable. Please contact the institution.';
 }
 
