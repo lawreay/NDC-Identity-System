@@ -16,6 +16,8 @@ $uploadMessage = '';
 $uploadType = '';
 $cardMessage = '';
 $cardMessageType = '';
+$profileMessage = '';
+$profileMessageType = '';
 $card = null;
 $cardRepository = null;
 $templates = [];
@@ -91,6 +93,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $id > 0) {
             } catch (Throwable $exception) {
                 $cardMessage = $exception->getMessage();
                 $cardMessageType = 'danger';
+            }
+        }
+    } elseif ($uploadMessage === '' && $action === 'delete_student') {
+        $currentUser = Auth::user();
+        if (($currentUser['role'] ?? '') !== 'Administrator') {
+            $profileMessage = 'Only administrators can delete a student.';
+            $profileMessageType = 'danger';
+        } elseif ($student === null) {
+            $profileMessage = 'Student not found.';
+            $profileMessageType = 'warning';
+        } else {
+            try {
+                if ($repository->delete($id)) {
+                    header('Location: students.php?deleted=1');
+                    exit;
+                }
+
+                $profileMessage = 'Unable to delete the student.';
+                $profileMessageType = 'danger';
+            } catch (Throwable $exception) {
+                $profileMessage = $exception->getMessage();
+                $profileMessageType = 'danger';
             }
         }
     } elseif ($uploadMessage === '') {
@@ -179,6 +203,15 @@ if (isset($_GET['created'])) {
                     <a href="student-id-card.php?id=<?= (int) ($student['id'] ?? 0) ?>" class="btn btn-outline-primary btn-sm">
                         Preview Card
                     </a>
+                    <?php if ((Auth::user()['role'] ?? '') === 'Administrator'): ?>
+                        <form method="post" onsubmit="return confirm('Delete this student permanently? Their ID card history will also be removed.');">
+                            <input type="hidden" name="_csrf" value="<?= htmlspecialchars(Auth::csrfToken(), ENT_QUOTES, 'UTF-8') ?>">
+                            <input type="hidden" name="action" value="delete_student">
+                            <button type="submit" class="btn btn-outline-danger btn-sm">
+                                <i class="bi bi-trash me-1" aria-hidden="true"></i>Delete Student
+                            </button>
+                        </form>
+                    <?php endif; ?>
                     <form method="get" action="student-id-card.php" class="d-flex flex-wrap gap-2">
                         <input type="hidden" name="id" value="<?= (int) ($student['id'] ?? 0) ?>">
                         <input type="hidden" name="export" value="pdf">
@@ -213,6 +246,9 @@ if (isset($_GET['created'])) {
             <?php endif; ?>
             <?php if ($cardMessage !== ''): ?>
                 <div class="alert alert-<?= htmlspecialchars($cardMessageType, ENT_QUOTES, 'UTF-8') ?>"><?= htmlspecialchars($cardMessage, ENT_QUOTES, 'UTF-8') ?></div>
+            <?php endif; ?>
+            <?php if ($profileMessage !== ''): ?>
+                <div class="alert alert-<?= htmlspecialchars($profileMessageType, ENT_QUOTES, 'UTF-8') ?>"><?= htmlspecialchars($profileMessage, ENT_QUOTES, 'UTF-8') ?></div>
             <?php endif; ?>
 
             <div class="card shadow-sm">

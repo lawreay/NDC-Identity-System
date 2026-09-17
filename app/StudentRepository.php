@@ -135,6 +135,48 @@ final class StudentRepository
         return $statement->execute($parameters);
     }
 
+    public function delete(int $id): bool
+    {
+        if ($id <= 0) {
+            return false;
+        }
+
+        $startedTransaction = false;
+
+        try {
+            if (!$this->connection->inTransaction()) {
+                $this->connection->beginTransaction();
+                $startedTransaction = true;
+            }
+
+            try {
+                $this->connection
+                    ->prepare('DELETE FROM student_id_cards WHERE student_id = :id')
+                    ->execute([':id' => $id]);
+            } catch (PDOException $exception) {
+                if ((string) $exception->getCode() !== '42S02') {
+                    throw $exception;
+                }
+            }
+
+            $statement = $this->connection->prepare('DELETE FROM students WHERE id = :id');
+            $statement->execute([':id' => $id]);
+            $deleted = $statement->rowCount() === 1;
+
+            if ($startedTransaction) {
+                $this->connection->commit();
+            }
+
+            return $deleted;
+        } catch (Throwable $exception) {
+            if ($startedTransaction && $this->connection->inTransaction()) {
+                $this->connection->rollBack();
+            }
+
+            throw $exception;
+        }
+    }
+
     public function studentNumberExists(string $studentNumber, ?int $ignoreId = null): bool
     {
         $sql = 'SELECT id FROM students WHERE student_number = :student_number';

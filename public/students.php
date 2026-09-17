@@ -33,6 +33,7 @@ $studentsMissingSurname = array_values(array_filter(
     $students,
     static fn (array $student): bool => trim((string) ($student['last_name'] ?? '')) === ''
 ));
+$notice = isset($_GET['deleted']) ? 'Student deleted successfully.' : '';
 
 ?><!DOCTYPE html>
 <html lang="en">
@@ -78,6 +79,10 @@ $studentsMissingSurname = array_values(array_filter(
                 <a href="students.php" class="btn btn-outline-secondary w-100">Clear</a>
             </div>
         </form>
+
+        <?php if ($notice !== ''): ?>
+            <div class="alert alert-success"><?= htmlspecialchars($notice, ENT_QUOTES, 'UTF-8') ?></div>
+        <?php endif; ?>
 
         <div class="ndc-directory-summary mb-4">
             <span><strong><?= number_format(count($students)) ?></strong> records</span>

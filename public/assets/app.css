@@ -59,20 +59,37 @@ body {
 }
 
 .ndc-nav-link {
-    color: rgba(255, 255, 255, .76);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: .25rem;
+    min-height: 2.35rem;
+    color: rgba(255, 255, 255, .88);
     text-decoration: none;
-    border-radius: .6rem;
-    padding: .48rem .7rem;
+    border: 1px solid rgba(255, 255, 255, .18);
+    border-radius: .75rem;
+    padding: .5rem .85rem;
+    background: rgba(255, 255, 255, .08);
     font-size: .88rem;
     font-weight: 650;
-    transition: color .18s ease, background-color .18s ease;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .08);
+    transition: color .18s ease, background-color .18s ease, border-color .18s ease, box-shadow .18s ease, transform .18s ease;
 }
 
 .ndc-nav-link:hover,
 .ndc-nav-link:focus,
 .ndc-nav-link[aria-current="page"] {
     color: #fff;
-    background: rgba(255, 255, 255, .13);
+    border-color: rgba(255, 255, 255, .34);
+    background: rgba(255, 255, 255, .18);
+    box-shadow: 0 10px 20px rgba(15, 23, 42, .15), inset 0 1px 0 rgba(255, 255, 255, .15);
+    transform: translateY(-1px);
+}
+
+.ndc-nav-link[aria-current="page"] {
+    color: #172554;
+    border-color: rgba(255, 255, 255, .72);
+    background: #fff;
 }
 
 .ndc-user-chip {
@@ -416,6 +433,7 @@ h1, h2, h3, h4, h5 {
 
     .ndc-section-nav .d-flex { gap: .35rem !important; }
     .ndc-section-nav .btn { flex: 1 1 45%; }
+    .ndc-nav-link { width: 100%; justify-content: flex-start; }
 
     .ndc-page-heading .btn { min-height: 2.75rem; }
     .ndc-panel-heading { flex-direction: column; }
