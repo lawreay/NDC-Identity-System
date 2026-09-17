@@ -32,6 +32,17 @@ if ($studentId <= 0) {
     exit('Invalid student ID');
 }
 
+// The browser preview renderer is the canonical template renderer. Redirect
+// legacy form submissions so they export the selected template rather than
+// falling back to the old fixed-coordinate PDF renderer.
+$templateId = trim((string) ($_POST['template_id'] ?? ''));
+$previewUrl = 'student-id-card.php?id=' . $studentId . '&export=pdf';
+if ($templateId !== '') {
+    $previewUrl .= '&template=' . rawurlencode($templateId);
+}
+header('Location: ' . $previewUrl, true, 303);
+exit;
+
 try {
     // Load student data
     $repository = new StudentRepository(Database::getConnection());

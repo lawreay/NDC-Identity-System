@@ -56,6 +56,88 @@ final class CardRepository
         ];
     }
 
+    /**
+     * Reissues a student's card after their identity details have changed.
+     * Any previously active QR becomes revoked, preventing an outdated printed
+     * card from being verified as current. The existing expiry date is kept.
+     *
+     * @return array<string, mixed>
+     */
+    public function reissueCard(int $studentId): array
+    {
+        if ($studentId <= 0) {
+            throw new RuntimeException('A valid student is required to recalculate an ID card.');
+        }
+
+        $this->ensureSchema();
+        $startedTransaction = false;
+
+        try {
+            if (!$this->connection->inTransaction()) {
+                $this->connection->beginTransaction();
+                $startedTransaction = true;
+            }
+
+            $activeCardQuery = $this->connection->prepare(
+                "SELECT expires_at
+                 FROM student_id_cards
+                 WHERE student_id = :student_id AND status = 'ACTIVE'
+                 ORDER BY id DESC
+                 LIMIT 1
+                 FOR UPDATE"
+            );
+            $activeCardQuery->execute([':student_id' => $studentId]);
+            $activeCard = $activeCardQuery->fetch();
+
+            $expiresAt = is_array($activeCard) ? $this->normalizeDate((string) ($activeCard['expires_at'] ?? '')) : null;
+            if ($expiresAt === null || $expiresAt < date('Y-m-d')) {
+                $expiresAt = date('Y-m-d', strtotime('+1 year'));
+            }
+
+            $revoke = $this->connection->prepare(
+                "UPDATE student_id_cards
+                 SET status = 'REVOKED', revoked_at = NOW()
+                 WHERE student_id = :student_id AND status = 'ACTIVE'"
+            );
+            $revoke->execute([':student_id' => $studentId]);
+
+            $guid = $this->newGuid();
+            $insert = $this->connection->prepare(
+                "INSERT INTO student_id_cards (student_id, guid, issued_at, expires_at, status)
+                 VALUES (:student_id, :guid, NOW(), :expires_at, 'ACTIVE')"
+            );
+            $insert->execute([
+                ':student_id' => $studentId,
+                ':guid' => $guid,
+                ':expires_at' => $expiresAt,
+            ]);
+
+            if ($startedTransaction) {
+                $this->connection->commit();
+            }
+
+            return [
+                'id' => (int) $this->connection->lastInsertId(),
+                'student_id' => $studentId,
+                'guid' => $guid,
+                'issued_at' => date('Y-m-d H:i:s'),
+                'expires_at' => $expiresAt,
+                'status' => 'ACTIVE',
+                'revoked_at' => null,
+            ];
+        } catch (Throwable $exception) {
+            if ($startedTransaction && $this->connection->inTransaction()) {
+                $this->connection->rollBack();
+            }
+
+            if ($exception instanceof RuntimeException) {
+                throw $exception;
+            }
+
+            throw new RuntimeException('Unable to recalculate the student ID card.', 0, $exception);
+        }
+    }
+
     /** @return array<string, mixed>|null */
     public function findByGuid(string $guid): ?array
     {

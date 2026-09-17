@@ -4,6 +4,7 @@ require_once __DIR__ . '/../app/StudentRepository.php';
 require_once __DIR__ . '/../app/CardRepository.php';
 require_once __DIR__ . '/../app/Auth.php';
 require_once __DIR__ . '/../app/Services/ImageUploadService.php';
+require_once __DIR__ . '/../app/TemplateDesigner/TemplateDesignerService.php';
 
 use App\Auth;
 use App\Services\ImageUploadService;
@@ -17,6 +18,8 @@ $cardMessage = '';
 $cardMessageType = '';
 $card = null;
 $cardRepository = null;
+$templates = [];
+$defaultTemplateId = '';
 
 try {
     $repository = new StudentRepository(Database::getConnection());
@@ -26,6 +29,14 @@ try {
 } catch (Throwable $exception) {
     $student = null;
     $errorMessage = $exception->getMessage();
+}
+
+try {
+    $templateService = new TemplateDesignerService();
+    $templates = $templateService->listTemplates();
+    $defaultTemplateId = (string) ($templateService->getDefaultTemplateId() ?? '');
+} catch (Throwable $exception) {
+    // Profile details and editing remain available if template storage is unavailable.
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $id > 0) {
@@ -38,7 +49,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $id > 0) {
     }
     
     $action = (string) ($_POST['action'] ?? 'upload_photo');
-    if ($uploadMessage === '' && $action === 'revoke_card') {
+    if ($uploadMessage === '' && $action === 'recalculate_card') {
+        $currentUser = Auth::user();
+        if (($currentUser['role'] ?? '') !== 'Administrator') {
+            $cardMessage = 'Only administrators can recalculate an issued ID card.';
+            $cardMessageType = 'danger';
+        } elseif (!$cardRepository instanceof CardRepository) {
+            $cardMessage = 'Card verification is not available.';
+            $cardMessageType = 'danger';
+        } else {
+            try {
+                $replacementCard = $cardRepository->reissueCard($id);
+                $cardMessage = 'ID recalculated. The new verification code is ' . (string) $replacementCard['guid'] . '. Previous printed cards are now invalid.';
+                $cardMessageType = 'success';
+            } catch (Throwable $exception) {
+                $cardMessage = $exception->getMessage();
+                $cardMessageType = 'danger';
+            }
+        }
+    } elseif ($uploadMessage === '' && $action === 'revoke_card') {
         $currentUser = Auth::user();
         if (($currentUser['role'] ?? '') !== 'Administrator') {
             $cardMessage = 'Only administrators can revoke an ID card.';
@@ -143,18 +172,26 @@ if (isset($_GET['created'])) {
             <a href="students.php" class="btn btn-outline-secondary btn-sm">← Back to students</a>
             
             <?php if ($student && $student !== null): ?>
-                <div class="btn-group" role="group">
+                <div class="d-flex flex-wrap justify-content-end gap-2">
                     <a href="student-form.php?id=<?= (int) ($student['id'] ?? 0) ?>" class="btn btn-outline-secondary btn-sm">
                         Edit Profile
                     </a>
                     <a href="student-id-card.php?id=<?= (int) ($student['id'] ?? 0) ?>" class="btn btn-outline-primary btn-sm">
                         Preview Card
                     </a>
-                    
-                    <form method="post" action="export-card.php" class="js-export-form" style="display:inline;">
-                        <input type="hidden" name="student_id" value="<?= (int) ($student['id'] ?? 0) ?>">
-                        <input type="hidden" name="_csrf" value="<?= htmlspecialchars(Auth::csrfToken(), ENT_QUOTES, 'UTF-8') ?>">
-                        <button type="submit" class="btn btn-primary btn-sm js-export-button" title="Export student ID card as PDF">
+                    <form method="get" action="student-id-card.php" class="d-flex flex-wrap gap-2">
+                        <input type="hidden" name="id" value="<?= (int) ($student['id'] ?? 0) ?>">
+                        <input type="hidden" name="export" value="pdf">
+                        <label class="visually-hidden" for="profileTemplate">ID card template</label>
+                        <select id="profileTemplate" name="template" class="form-select form-select-sm" style="min-width: 190px;">
+                            <option value="">Default template</option>
+                            <?php foreach ($templates as $template): ?>
+                                <option value="<?= htmlspecialchars((string) ($template['id'] ?? ''), ENT_QUOTES, 'UTF-8') ?>" <?= (($template['id'] ?? '') === $defaultTemplateId) ? 'selected' : '' ?>>
+                                    <?= htmlspecialchars((string) ($template['name'] ?? 'Untitled template'), ENT_QUOTES, 'UTF-8') ?><?= (($template['id'] ?? '') === $defaultTemplateId) ? ' (default)' : '' ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                        <button type="submit" class="btn btn-primary btn-sm" title="Export the selected ID card template as PDF">
                             Export PDF
                         </button>
                     </form>
@@ -303,12 +340,21 @@ if (isset($_GET['created'])) {
                                             <div class="small text-muted">Opening the card preview or exporting it issues the card.</div>
                                         <?php endif; ?>
                                     </div>
-                                    <?php if ($card && ($card['status'] ?? '') === 'ACTIVE' && (Auth::user()['role'] ?? '') === 'Administrator'): ?>
-                                        <form method="post" onsubmit="return confirm('Revoke this ID card? Its QR code will immediately report that it is revoked.');">
-                                            <input type="hidden" name="_csrf" value="<?= htmlspecialchars(Auth::csrfToken(), ENT_QUOTES, 'UTF-8') ?>">
-                                            <input type="hidden" name="action" value="revoke_card">
-                                            <button type="submit" class="btn btn-outline-danger btn-sm">Revoke ID card</button>
-                                        </form>
+                                    <?php if ((Auth::user()['role'] ?? '') === 'Administrator'): ?>
+                                        <div class="d-flex flex-wrap gap-2">
+                                            <form method="post" onsubmit="return confirm('Recalculate this ID? A new verification QR will be created and every previously printed ID for this student will become invalid.');">
+                                                <input type="hidden" name="_csrf" value="<?= htmlspecialchars(Auth::csrfToken(), ENT_QUOTES, 'UTF-8') ?>">
+                                                <input type="hidden" name="action" value="recalculate_card">
+                                                <button type="submit" class="btn btn-outline-warning btn-sm">Recalculate ID</button>
+                                            </form>
+                                            <?php if ($card && ($card['status'] ?? '') === 'ACTIVE'): ?>
+                                                <form method="post" onsubmit="return confirm('Revoke this ID card? Its QR code will immediately report that it is revoked.');">
+                                                    <input type="hidden" name="_csrf" value="<?= htmlspecialchars(Auth::csrfToken(), ENT_QUOTES, 'UTF-8') ?>">
+                                                    <input type="hidden" name="action" value="revoke_card">
+                                                    <button type="submit" class="btn btn-outline-danger btn-sm">Revoke ID card</button>
+                                                </form>
+                                            <?php endif; ?>
+                                        </div>
                                     <?php endif; ?>
                                 </div>
                             </div>

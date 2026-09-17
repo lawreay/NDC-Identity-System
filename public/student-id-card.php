@@ -21,6 +21,8 @@ $settingsRepository = new SettingsRepository(Database::getConnection());
 $message = '';
 $messageType = 'success';
 $templateId = trim((string) ($_GET['template'] ?? ''));
+$autoExport = strtolower(trim((string) ($_GET['export'] ?? '')));
+$autoExport = $autoExport === 'pdf' ? $autoExport : '';
 $downloadFileStem = 'student-id-card';
 
 try {
@@ -51,6 +53,7 @@ try {
     if ($selectedTemplate === null) {
         $message = 'No template selected and no default template is configured. Please set a default template in the Template Designer.';
         $messageType = 'danger';
+        $autoExport = '';
     }
 
     if ($selectedTemplate !== null) {
@@ -118,7 +121,7 @@ function escape(string $value): string
         .preview-frame.is-loaded .preview-loading { opacity:0; pointer-events:none; }
     </style>
 </head>
-<body>
+<body data-auto-export="<?= escape($autoExport) ?>" data-auto-export-file-stem="<?= escape($downloadFileStem) ?>">
 <?php require_once __DIR__ . '/partials/header.php'; ?>
 <div class="container py-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
@@ -394,6 +397,21 @@ function escape(string $value): string
                 }
             });
         });
+
+        if (document.body.dataset.autoExport === 'pdf') {
+            const query = new URLSearchParams(window.location.search);
+            query.delete('export');
+            const cleanUrl = window.location.pathname + (query.toString() === '' ? '' : '?' + query.toString());
+            window.history.replaceState({}, '', cleanUrl);
+
+            window.setTimeout(async () => {
+                try {
+                    await exportPdf(document.body.dataset.autoExportFileStem || 'student-id-card');
+                } catch (error) {
+                    window.alert(error instanceof Error ? error.message : 'Unable to export this card. Please try again.');
+                }
+            }, 120);
+        }
     }());
 </script>
 </body>
