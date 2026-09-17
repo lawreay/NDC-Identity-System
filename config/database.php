@@ -31,9 +31,9 @@ $env = static function (string $key, string $default = ''): string {
 };
 
 return [
-    'host' => $env('DB_HOST', 'sql305.infinityfree.com'),
+    'host' => $env('DB_HOST', 'sql212.infinityfree.com'),
     'port' => (int) $env('DB_PORT', '3306'),
-    'name' => $env('DB_NAME', 'if0_42519572_ndc'),
-    'user' => $env('DB_USER', 'if0_42519572'),
-    'pass' => $env('DB_PASS'),
+    'name' => $env('DB_NAME', 'if0_42819978_ndc'),
+    'user' => $env('DB_USER', 'if0_42819978'),
+    'pass' => $env('DB_PASS', 'zlbGAacxzZf'),
 ];
