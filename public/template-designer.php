@@ -126,7 +126,9 @@ $student = [
     'department' => 'ICT',
     'program' => 'Software Development',
     'class_level' => 'Level 3',
-    'qualification' => 'Certificate',
+    'qualification' => 'MSCE',
+    'billing_category' => 'Formal',
+    'mode_of_study' => 'Formal',
     'status' => 'Active',
     'issue_date' => '2026-01-20',
     'expiry_date' => '2027-01-20',
@@ -425,6 +427,8 @@ if ($template !== null && is_array($template)) {
                                 <button type="button" class="btn btn-sm btn-outline-secondary tag-button" data-tag="{{student.department}}">Department</button>
                                 <button type="button" class="btn btn-sm btn-outline-secondary tag-button" data-tag="{{student.class_level}}">Class</button>
                                 <button type="button" class="btn btn-sm btn-outline-secondary tag-button" data-tag="{{student.qualification}}">Qualification</button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary tag-button" data-tag="{{student.billing_category}}">Billing</button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary tag-button" data-tag="{{student.mode_of_study}}">Mode</button>
                                 <button type="button" class="btn btn-sm btn-outline-secondary tag-button" data-tag="{{student.issue_date}}">Issue Date</button>
                                 <button type="button" class="btn btn-sm btn-outline-secondary tag-button" data-tag="{{student.expiry_date}}">Expiry Date</button>
                                 <button type="button" class="btn btn-sm btn-outline-secondary tag-button" data-tag="{{student.status}}">Status</button>
@@ -557,7 +561,9 @@ if ($template !== null && is_array($template)) {
         'student.department': <?= json_encode($student['department'] ?? 'ICT', JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>,
         'student.program': <?= json_encode($student['program'] ?? 'Software Development', JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>,
         'student.class_level': <?= json_encode($student['class_level'] ?? 'Level 3', JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>,
-        'student.qualification': <?= json_encode($student['qualification'] ?? 'Certificate', JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>,
+        'student.qualification': <?= json_encode($student['qualification'] ?? 'MSCE', JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>,
+        'student.billing_category': <?= json_encode($student['billing_category'] ?? 'Formal', JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>,
+        'student.mode_of_study': <?= json_encode($student['mode_of_study'] ?? 'Formal', JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>,
         'student.issue_date': <?= json_encode($student['issue_date'] ?? '2026-01-20', JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>,
         'student.expiry_date': <?= json_encode($student['expiry_date'] ?? '2027-01-20', JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>,
         'student.status': <?= json_encode($student['status'] ?? 'Active', JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>,

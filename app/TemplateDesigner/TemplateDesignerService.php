@@ -327,6 +327,7 @@ final class TemplateDesignerService
         }
 
         $serialNumber = (string) ($student['student_number'] ?? 'N/A');
+        $modeOfStudy = $this->modeOfStudyForQualification((string) ($student['qualification'] ?? ''));
         $verificationCode = trim((string) ($student['card_guid'] ?? '')) ?: $this->verificationCode($student, $organization);
         $verificationUrl = trim((string) ($student['verification_url'] ?? ''));
         if ($verificationUrl === '') {
@@ -343,6 +344,8 @@ final class TemplateDesignerService
             'student.program' => htmlspecialchars((string) ($student['program'] ?? 'N/A'), ENT_QUOTES, 'UTF-8'),
             'student.class_level' => htmlspecialchars((string) ($student['class_level'] ?? 'N/A'), ENT_QUOTES, 'UTF-8'),
             'student.qualification' => htmlspecialchars((string) ($student['qualification'] ?? 'N/A'), ENT_QUOTES, 'UTF-8'),
+            'student.billing_category' => htmlspecialchars((string) ($student['billing_category'] ?? 'N/A'), ENT_QUOTES, 'UTF-8'),
+            'student.mode_of_study' => htmlspecialchars($modeOfStudy, ENT_QUOTES, 'UTF-8'),
             'student.issue_date' => htmlspecialchars((string) ($student['issue_date'] ?? date('Y-m-d')), ENT_QUOTES, 'UTF-8'),
             'student.expiry_date' => htmlspecialchars((string) ($student['expiry_date'] ?? date('Y-m-d', strtotime('+1 year'))), ENT_QUOTES, 'UTF-8'),
             'student.status' => htmlspecialchars((string) ($student['status'] ?? 'Active'), ENT_QUOTES, 'UTF-8'),
@@ -794,6 +797,15 @@ HTML;
         $hash = strtoupper(substr(hash('crc32b', $base . '|' . ($student['full_name'] ?? '') . '|' . ($student['expiry_date'] ?? '')), 0, 8));
 
         return $org . '-' . preg_replace('/[^A-Za-z0-9]/', '', $base) . '-' . $hash;
+    }
+
+    private function modeOfStudyForQualification(string $qualification): string
+    {
+        return match (strtoupper(trim($qualification))) {
+            'MSCE' => 'Formal',
+            'JCE' => 'Informal',
+            default => 'N/A',
+        };
     }
 
     /**
