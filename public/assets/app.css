@@ -270,6 +270,19 @@ body {
 .ndc-bulk-toolbar { padding: .75rem .9rem; background: #f8fafc; border: 1px solid var(--ndc-border); border-radius: .8rem; }
 .ndc-bulk-toolbar .form-select { min-width: 220px; }
 
+.ndc-export-fields {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: .45rem .9rem;
+}
+
+.ndc-export-fields .form-check {
+    min-height: 1.6rem;
+    margin: 0;
+    color: #334155;
+    font-size: .84rem;
+}
+
 .card-header {
     border-bottom-color: var(--ndc-border);
     background: rgba(248, 250, 252, .8);
@@ -448,6 +461,7 @@ h1, h2, h3, h4, h5 {
     .ndc-bulk-toolbar .form-select,
     .ndc-bulk-toolbar .btn-group { width: 100%; }
     .ndc-bulk-toolbar .btn-group .btn { flex: 1 1 50%; }
+    .ndc-export-fields { grid-template-columns: 1fr; }
     .ndc-login-page { padding: .75rem; place-items: start center; }
     .ndc-login-aside { min-height: auto; padding: 1.5rem; }
     .ndc-login-aside h1 { font-size: 2rem; }

@@ -7,7 +7,7 @@ $user = Auth::user();
 $userName = (string) ($user['name'] ?? 'User');
 $userRole = (string) ($user['role'] ?? '');
 $currentPage = basename((string) ($_SERVER['PHP_SELF'] ?? ''));
-$studentPages = ['students.php', 'student-profile.php', 'student-form.php', 'student-id-card.php'];
+$studentPages = ['students.php', 'student-profile.php', 'student-form.php', 'student-id-card.php', 'export-student-data.php'];
 ?><nav class="navbar navbar-expand-lg navbar-dark ndc-navbar mb-4">
     <div class="container">
         <a class="navbar-brand ndc-brand" href="dashboard.php">

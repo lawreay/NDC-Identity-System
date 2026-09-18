@@ -4,10 +4,12 @@ require_once __DIR__ . '/../app/StudentRepository.php';
 require_once __DIR__ . '/../app/CardRepository.php';
 require_once __DIR__ . '/../app/Auth.php';
 require_once __DIR__ . '/../app/Services/ImageUploadService.php';
+require_once __DIR__ . '/../app/Services/StudentDataExportService.php';
 require_once __DIR__ . '/../app/TemplateDesigner/TemplateDesignerService.php';
 
 use App\Auth;
 use App\Services\ImageUploadService;
+use App\Services\StudentDataExportService;
 
 Auth::requireLogin();
 
@@ -22,6 +24,8 @@ $card = null;
 $cardRepository = null;
 $templates = [];
 $defaultTemplateId = '';
+$exportFields = StudentDataExportService::availableFields();
+$defaultExportFields = StudentDataExportService::defaultFields();
 
 try {
     $repository = new StudentRepository(Database::getConnection());
@@ -251,6 +255,31 @@ if (isset($_GET['created'])) {
                 <div class="alert alert-<?= htmlspecialchars($profileMessageType, ENT_QUOTES, 'UTF-8') ?>"><?= htmlspecialchars($profileMessage, ENT_QUOTES, 'UTF-8') ?></div>
             <?php endif; ?>
 
+            <form method="post" action="export-student-data.php" class="card shadow-sm mb-4">
+                <div class="card-body">
+                    <input type="hidden" name="_csrf" value="<?= htmlspecialchars(Auth::csrfToken(), ENT_QUOTES, 'UTF-8') ?>">
+                    <input type="hidden" name="student_ids[]" value="<?= (int) ($student['id'] ?? 0) ?>">
+                    <div class="d-flex flex-wrap justify-content-between align-items-start gap-3">
+                        <div>
+                            <h2 class="h5 mb-1">Export student data</h2>
+                            <p class="text-muted mb-0">Choose the profile fields to include for this student.</p>
+                        </div>
+                        <div class="btn-group">
+                            <button type="submit" name="export_format" value="csv" class="btn btn-outline-success btn-sm"><i class="bi bi-file-earmark-spreadsheet me-1" aria-hidden="true"></i>Excel CSV</button>
+                            <button type="submit" name="export_format" value="pdf" class="btn btn-outline-danger btn-sm"><i class="bi bi-file-earmark-pdf me-1" aria-hidden="true"></i>PDF</button>
+                        </div>
+                    </div>
+                    <div class="ndc-export-fields mt-3">
+                        <?php foreach ($exportFields as $field => $label): ?>
+                            <label class="form-check">
+                                <input class="form-check-input" type="checkbox" name="export_fields[]" value="<?= htmlspecialchars($field, ENT_QUOTES, 'UTF-8') ?>" <?= in_array($field, $defaultExportFields, true) ? 'checked' : '' ?>>
+                                <span class="form-check-label"><?= htmlspecialchars($label, ENT_QUOTES, 'UTF-8') ?></span>
+                            </label>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+            </form>
+
             <div class="card shadow-sm">
                 <div class="card-body">
                     <div class="row g-4 align-items-start">
@@ -348,6 +377,14 @@ if (isset($_GET['created'])) {
                                     <div class="fw-semibold"><?= htmlspecialchars((string) ($student['billing_category'] ?? ''), ENT_QUOTES, 'UTF-8') ?></div>
                                 </div>
                                 <div class="col-sm-6">
+                                    <div class="text-muted small">Mode of study</div>
+                                    <div class="fw-semibold"><?= htmlspecialchars(match (strtoupper((string) ($student['qualification'] ?? ''))) {
+                                        'MSCE' => 'Formal',
+                                        'JCE' => 'Informal',
+                                        default => '',
+                                    }, ENT_QUOTES, 'UTF-8') ?></div>
+                                </div>
+                                <div class="col-sm-6">
                                     <div class="text-muted small">Phone number</div>
                                     <div class="fw-semibold"><?= htmlspecialchars((string) ($student['phone_number'] ?? ''), ENT_QUOTES, 'UTF-8') ?></div>
                                 </div>
@@ -362,6 +399,34 @@ if (isset($_GET['created'])) {
                                 <div class="col-sm-6">
                                     <div class="text-muted small">Village</div>
                                     <div class="fw-semibold"><?= htmlspecialchars((string) ($student['village'] ?? ''), ENT_QUOTES, 'UTF-8') ?></div>
+                                </div>
+                                <div class="col-12">
+                                    <hr class="my-2">
+                                    <h2 class="h5 mb-1">Parent or guardian</h2>
+                                </div>
+                                <div class="col-sm-6">
+                                    <div class="text-muted small">Name</div>
+                                    <div class="fw-semibold"><?= htmlspecialchars((string) ($student['guardian_name'] ?? ''), ENT_QUOTES, 'UTF-8') ?></div>
+                                </div>
+                                <div class="col-sm-6">
+                                    <div class="text-muted small">Relationship</div>
+                                    <div class="fw-semibold"><?= htmlspecialchars((string) ($student['guardian_relationship'] ?? ''), ENT_QUOTES, 'UTF-8') ?></div>
+                                </div>
+                                <div class="col-sm-6">
+                                    <div class="text-muted small">Phone</div>
+                                    <div class="fw-semibold"><?= htmlspecialchars((string) ($student['guardian_phone'] ?? ''), ENT_QUOTES, 'UTF-8') ?></div>
+                                </div>
+                                <div class="col-sm-6">
+                                    <div class="text-muted small">Alternative phone</div>
+                                    <div class="fw-semibold"><?= htmlspecialchars((string) ($student['guardian_alt_phone'] ?? ''), ENT_QUOTES, 'UTF-8') ?></div>
+                                </div>
+                                <div class="col-sm-6">
+                                    <div class="text-muted small">Email</div>
+                                    <div class="fw-semibold"><?= htmlspecialchars((string) ($student['guardian_email'] ?? ''), ENT_QUOTES, 'UTF-8') ?></div>
+                                </div>
+                                <div class="col-sm-6">
+                                    <div class="text-muted small">Address</div>
+                                    <div class="fw-semibold"><?= nl2br(htmlspecialchars((string) ($student['guardian_address'] ?? ''), ENT_QUOTES, 'UTF-8')) ?></div>
                                 </div>
                             </div>
                             <div class="border-top mt-4 pt-3">

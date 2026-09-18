@@ -35,6 +35,12 @@ $fields = [
     'program',
     'class_level',
     'billing_category',
+    'guardian_name',
+    'guardian_relationship',
+    'guardian_phone',
+    'guardian_alt_phone',
+    'guardian_email',
+    'guardian_address',
     'status',
 ];
 
@@ -294,6 +300,35 @@ $existingPhotoUrl = $isEdit && is_array($student) && !empty($student['photo_path
                 <div class="col-md-4">
                     <label class="form-label" for="village">Village</label>
                     <input id="village" type="text" name="village" class="form-control" value="<?= escape($form['village']) ?>">
+                </div>
+                <div class="col-12">
+                    <hr class="my-2">
+                    <h2 class="h5 mb-1">Parent or guardian</h2>
+                    <p class="text-muted mb-0">Store emergency contact details with the student profile.</p>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label" for="guardian_name">Parent/guardian name</label>
+                    <input id="guardian_name" type="text" name="guardian_name" class="form-control" value="<?= escape($form['guardian_name']) ?>">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label" for="guardian_relationship">Relationship</label>
+                    <input id="guardian_relationship" type="text" name="guardian_relationship" class="form-control" value="<?= escape($form['guardian_relationship']) ?>" placeholder="Parent, guardian, sponsor">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label" for="guardian_phone">Guardian phone</label>
+                    <input id="guardian_phone" type="text" name="guardian_phone" class="form-control" value="<?= escape($form['guardian_phone']) ?>">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label" for="guardian_alt_phone">Alternative phone</label>
+                    <input id="guardian_alt_phone" type="text" name="guardian_alt_phone" class="form-control" value="<?= escape($form['guardian_alt_phone']) ?>">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label" for="guardian_email">Guardian email</label>
+                    <input id="guardian_email" type="email" name="guardian_email" class="form-control" value="<?= escape($form['guardian_email']) ?>">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label" for="guardian_address">Guardian address</label>
+                    <textarea id="guardian_address" name="guardian_address" class="form-control" rows="2"><?= escape($form['guardian_address']) ?></textarea>
                 </div>
                 <div class="col-md-8">
                     <label class="form-label" for="photo">Choose a new photo</label>
