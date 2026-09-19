@@ -198,6 +198,7 @@ $signaturePreview = getPreviewSrc($settings['principal_signature_path'] ?? $sett
                 <a href="settings.php" class="btn btn-primary">App Settings</a>
                 <?php if ($isAdministrator): ?>
                     <a href="admin-users.php" class="btn btn-outline-secondary">Admin Users</a>
+                    <a href="data-backup.php" class="btn btn-outline-secondary">Data Backup</a>
                     <a href="app-update.php" class="btn btn-outline-secondary">Updates</a>
                     <a href="template-designer.php" class="btn btn-outline-secondary">Template Designer</a>
                 <?php endif; ?>

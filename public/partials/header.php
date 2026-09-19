@@ -24,7 +24,7 @@ $academicPages = ['academic-dashboard.php', 'academic-programmes.php', 'academic
                 <a class="ndc-nav-link" href="students.php" <?= in_array($currentPage, $studentPages, true) ? 'aria-current="page"' : '' ?>><i class="bi bi-people-fill me-1" aria-hidden="true"></i>Students</a>
                 <a class="ndc-nav-link" href="academic-dashboard.php" <?= in_array($currentPage, $academicPages, true) ? 'aria-current="page"' : '' ?>><i class="bi bi-mortarboard-fill me-1" aria-hidden="true"></i>Academic</a>
                 <?php if ($userRole === 'Administrator'): ?>
-                    <a class="ndc-nav-link" href="settings.php" <?= $currentPage === 'settings.php' || $currentPage === 'admin-users.php' || $currentPage === 'app-update.php' ? 'aria-current="page"' : '' ?>><i class="bi bi-sliders2 me-1" aria-hidden="true"></i>Settings</a>
+                    <a class="ndc-nav-link" href="settings.php" <?= $currentPage === 'settings.php' || $currentPage === 'admin-users.php' || $currentPage === 'data-backup.php' || $currentPage === 'app-update.php' ? 'aria-current="page"' : '' ?>><i class="bi bi-sliders2 me-1" aria-hidden="true"></i>Settings</a>
                 <?php endif; ?>
             </div>
             <div class="d-flex flex-column flex-lg-row align-items-lg-center gap-2 mt-3 mt-lg-0">

@@ -114,6 +114,7 @@ function formatBytes(int $bytes): string
             <div class="d-flex flex-wrap gap-2">
                 <a href="settings.php" class="btn btn-outline-secondary">App Settings</a>
                 <a href="admin-users.php" class="btn btn-outline-secondary">Admin Users</a>
+                <a href="data-backup.php" class="btn btn-outline-secondary">Data Backup</a>
                 <a href="app-update.php" class="btn btn-primary">Updates</a>
                 <a href="template-designer.php" class="btn btn-outline-secondary">Template Designer</a>
             </div>

@@ -2,6 +2,7 @@
 require_once __DIR__ . '/../app/Database.php';
 require_once __DIR__ . '/../app/StudentRepository.php';
 require_once __DIR__ . '/../app/SettingsRepository.php';
+require_once __DIR__ . '/../app/AcademicProgrammeRepository.php';
 require_once __DIR__ . '/../app/Auth.php';
 require_once __DIR__ . '/../app/Services/ImageUploadService.php';
 
@@ -15,7 +16,21 @@ $repository = new StudentRepository($connection);
 $settingsRepository = new SettingsRepository($connection);
 $settings = $settingsRepository->getAll();
 $imageUploadService = new ImageUploadService();
-$programOptions = optionLines((string) ($settings['academic_programs'] ?? ''));
+$legacyProgramOptions = optionLines((string) ($settings['academic_programs'] ?? ''));
+$programOptions = $legacyProgramOptions;
+$programSource = 'settings';
+try {
+    $academicProgrammeRepository = new AcademicProgrammeRepository($connection);
+    $academicProgrammeRepository->seedFromNames($legacyProgramOptions);
+    $academicProgrammeOptions = $academicProgrammeRepository->activeNames();
+    if ($academicProgrammeOptions !== []) {
+        $programOptions = $academicProgrammeOptions;
+        $programSource = 'academic';
+    }
+} catch (Throwable $exception) {
+    $programOptions = $legacyProgramOptions;
+    $programSource = 'settings';
+}
 $id = isset($_GET['id']) ? (int) $_GET['id'] : (int) ($_POST['id'] ?? 0);
 $isEdit = $id > 0;
 $errors = [];
@@ -85,7 +100,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $errors[] = 'Please choose a valid qualification.';
     }
     if ($programOptions !== [] && !in_array($form['program'], $programOptions, true)) {
-        $errors[] = 'Please choose a program from app settings.';
+        $errors[] = $programSource === 'academic'
+            ? 'Please choose a programme from Academic Programmes.'
+            : 'Please choose a program from app settings.';
     }
     if ($form['student_number'] !== '' && $repository->studentNumberExists($form['student_number'], $isEdit ? $id : null)) {
         $errors[] = 'That student number is already in use.';
@@ -264,7 +281,7 @@ $existingPhotoUrl = $isEdit && is_array($student) && !empty($student['photo_path
                     <label class="form-label" for="program">Program</label>
                     <select id="program" name="program" class="form-select" <?= $programOptions === [] ? 'disabled' : '' ?>>
                         <?php if ($programOptions === []): ?>
-                            <option value="">Add programs under Settings first</option>
+                            <option value="">Add programmes under Academic first</option>
                         <?php else: ?>
                             <option value="">Select program</option>
                             <?php if ($form['program'] !== '' && !in_array($form['program'], $programOptions, true)): ?>

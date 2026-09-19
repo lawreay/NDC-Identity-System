@@ -24,6 +24,51 @@ final class AcademicProgrammeRepository
         return $statement->fetchAll();
     }
 
+    /**
+     * @return array<int, string>
+     */
+    public function activeNames(): array
+    {
+        return array_values(array_map(
+            static fn (array $programme): string => (string) ($programme['name'] ?? ''),
+            array_filter($this->active(), static fn (array $programme): bool => trim((string) ($programme['name'] ?? '')) !== '')
+        ));
+    }
+
+    /**
+     * Imports legacy programme names from the old settings textarea.
+     *
+     * @param array<int, string> $names
+     */
+    public function seedFromNames(array $names): int
+    {
+        $created = 0;
+        foreach ($names as $name) {
+            $name = trim($name);
+            if ($name === '') {
+                continue;
+            }
+
+            $code = $this->codeForName($name);
+            $statement = $this->connection->prepare('SELECT id FROM academic_programmes WHERE code = :code OR name = :name LIMIT 1');
+            $statement->execute([':code' => $code, ':name' => $name]);
+            if ($statement->fetch()) {
+                continue;
+            }
+
+            $this->create([
+                'code' => $code,
+                'name' => $name,
+                'qualification' => $name,
+                'duration' => '',
+                'status' => 'active',
+            ]);
+            $created++;
+        }
+
+        return $created;
+    }
+
     /** @return array<string, mixed>|null */
     public function find(int $id): ?array
     {
@@ -97,5 +142,15 @@ final class AcademicProgrammeRepository
             ':duration' => $data['duration'] !== '' ? $data['duration'] : null,
             ':status' => $data['status'],
         ];
+    }
+
+    private function codeForName(string $name): string
+    {
+        $letters = strtoupper(preg_replace('/[^A-Z0-9]+/i', '', $name) ?? '');
+        if ($letters !== '') {
+            return substr($letters, 0, 12);
+        }
+
+        return 'PROG' . strtoupper(substr(hash('crc32b', $name), 0, 6));
     }
 }

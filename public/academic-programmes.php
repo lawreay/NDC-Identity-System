@@ -2,6 +2,7 @@
 require_once __DIR__ . '/../app/Database.php';
 require_once __DIR__ . '/../app/Auth.php';
 require_once __DIR__ . '/../app/AcademicProgrammeRepository.php';
+require_once __DIR__ . '/../app/SettingsRepository.php';
 
 use App\Auth;
 
@@ -14,6 +15,12 @@ $form = ['code' => '', 'name' => '', 'qualification' => '', 'duration' => '', 's
 
 try {
     $repository = new AcademicProgrammeRepository(Database::getConnection());
+    $settings = (new SettingsRepository(Database::getConnection()))->getAll();
+    $legacyProgrammes = optionLines((string) ($settings['academic_programs'] ?? ''));
+    $importedLegacyProgrammes = $repository->seedFromNames($legacyProgrammes);
+    if ($importedLegacyProgrammes > 0 && $success === '') {
+        $success = $importedLegacyProgrammes . ' programme' . ($importedLegacyProgrammes === 1 ? '' : 's') . ' imported from Settings.';
+    }
     if ($editingId > 0) {
         $existing = $repository->find($editingId);
         if ($existing) {
@@ -50,6 +57,23 @@ try {
 }
 
 function e(string $value): string { return htmlspecialchars($value, ENT_QUOTES, 'UTF-8'); }
+
+/**
+ * @return array<int, string>
+ */
+function optionLines(string $value): array
+{
+    $parts = preg_split('/\r\n|\r|\n|,/', $value) ?: [];
+    $options = [];
+    foreach ($parts as $part) {
+        $option = trim($part);
+        if ($option !== '' && !in_array($option, $options, true)) {
+            $options[] = $option;
+        }
+    }
+
+    return $options;
+}
 ?><!DOCTYPE html>
 <html lang="en">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Academic Programmes</title><link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"><link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet"><link href="assets/app.css" rel="stylesheet"></head>
