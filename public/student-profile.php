@@ -5,6 +5,7 @@ require_once __DIR__ . '/../app/CardRepository.php';
 require_once __DIR__ . '/../app/Auth.php';
 require_once __DIR__ . '/../app/Services/ImageUploadService.php';
 require_once __DIR__ . '/../app/TemplateDesigner/TemplateDesignerService.php';
+require_once __DIR__ . '/../app/StudentEnrolmentRepository.php';
 
 use App\Auth;
 use App\Services\ImageUploadService;
@@ -22,6 +23,7 @@ $card = null;
 $cardRepository = null;
 $templates = [];
 $defaultTemplateId = '';
+$academicEnrolments = [];
 
 try {
     $repository = new StudentRepository(Database::getConnection());
@@ -154,6 +156,14 @@ if ($student && $cardRepository instanceof CardRepository) {
         $card = $cardRepository->findLatestByStudentId($id);
     } catch (Throwable $exception) {
         $card = null;
+    }
+}
+
+if ($student) {
+    try {
+        $academicEnrolments = (new StudentEnrolmentRepository(Database::getConnection()))->forStudent($id);
+    } catch (Throwable $exception) {
+        $academicEnrolments = [];
     }
 }
 
@@ -404,6 +414,33 @@ if (isset($_GET['created'])) {
                                 </div>
                             </div>
                             <div class="border-top mt-4 pt-3">
+                                <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
+                                    <div>
+                                        <h2 class="h5 mb-1">Academic enrolments</h2>
+                                        <p class="text-muted small mb-0">Programme assignments from the Academic module.</p>
+                                    </div>
+                                    <a href="academic-enrolments.php" class="btn btn-outline-primary btn-sm"><i class="bi bi-mortarboard-fill me-1" aria-hidden="true"></i>Manage enrolments</a>
+                                </div>
+                                <?php if ($academicEnrolments === []): ?>
+                                    <div class="alert alert-light border mb-4">No academic enrolment recorded yet.</div>
+                                <?php else: ?>
+                                    <div class="table-responsive mb-4">
+                                        <table class="table table-sm align-middle">
+                                            <thead><tr><th>Programme</th><th>Term</th><th>Enrolled</th><th>Status</th></tr></thead>
+                                            <tbody>
+                                            <?php foreach ($academicEnrolments as $enrolment): ?>
+                                                <tr>
+                                                    <td><?= htmlspecialchars((string) ($enrolment['programme_code'] ?? '') . ' - ' . (string) ($enrolment['programme_name'] ?? ''), ENT_QUOTES, 'UTF-8') ?></td>
+                                                    <td><?= htmlspecialchars(trim((string) ($enrolment['academic_year'] ?? '') . ' ' . (string) ($enrolment['term_name'] ?? '') . ' ' . (string) ($enrolment['semester'] ?? '')), ENT_QUOTES, 'UTF-8') ?></td>
+                                                    <td><?= htmlspecialchars((string) ($enrolment['enrolled_at'] ?? ''), ENT_QUOTES, 'UTF-8') ?></td>
+                                                    <td><span class="badge text-bg-secondary"><?= htmlspecialchars((string) ($enrolment['status'] ?? ''), ENT_QUOTES, 'UTF-8') ?></span></td>
+                                                </tr>
+                                            <?php endforeach; ?>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                <?php endif; ?>
+
                                 <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
                                     <div>
                                         <div class="text-muted small">Latest ID card</div>

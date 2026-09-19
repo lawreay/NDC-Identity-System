@@ -8,6 +8,7 @@ $userName = (string) ($user['name'] ?? 'User');
 $userRole = (string) ($user['role'] ?? '');
 $currentPage = basename((string) ($_SERVER['PHP_SELF'] ?? ''));
 $studentPages = ['students.php', 'student-profile.php', 'student-form.php', 'student-id-card.php', 'student-data-export.php', 'export-student-data.php'];
+$academicPages = ['academic-dashboard.php', 'academic-programmes.php', 'academic-courses.php', 'academic-terms.php', 'academic-enrolments.php'];
 ?><nav class="navbar navbar-expand-lg navbar-dark ndc-navbar mb-4">
     <div class="container">
         <a class="navbar-brand ndc-brand" href="dashboard.php">
@@ -21,6 +22,7 @@ $studentPages = ['students.php', 'student-profile.php', 'student-form.php', 'stu
             <div class="d-flex flex-column flex-lg-row align-items-lg-center gap-1 ms-lg-4 me-lg-auto mt-3 mt-lg-0">
                 <a class="ndc-nav-link" href="dashboard.php" <?= $currentPage === 'dashboard.php' || $currentPage === 'index.php' ? 'aria-current="page"' : '' ?>><i class="bi bi-grid-1x2-fill me-1" aria-hidden="true"></i>Dashboard</a>
                 <a class="ndc-nav-link" href="students.php" <?= in_array($currentPage, $studentPages, true) ? 'aria-current="page"' : '' ?>><i class="bi bi-people-fill me-1" aria-hidden="true"></i>Students</a>
+                <a class="ndc-nav-link" href="academic-dashboard.php" <?= in_array($currentPage, $academicPages, true) ? 'aria-current="page"' : '' ?>><i class="bi bi-mortarboard-fill me-1" aria-hidden="true"></i>Academic</a>
                 <?php if ($userRole === 'Administrator'): ?>
                     <a class="ndc-nav-link" href="settings.php" <?= $currentPage === 'settings.php' || $currentPage === 'admin-users.php' || $currentPage === 'app-update.php' ? 'aria-current="page"' : '' ?>><i class="bi bi-sliders2 me-1" aria-hidden="true"></i>Settings</a>
                 <?php endif; ?>
