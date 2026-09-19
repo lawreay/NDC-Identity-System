@@ -4,11 +4,17 @@ require_once __DIR__ . '/../app/Database.php';
 require_once __DIR__ . '/../app/CardRepository.php';
 require_once __DIR__ . '/../app/SettingsRepository.php';
 require_once __DIR__ . '/../app/Services/CardVerificationService.php';
+require_once __DIR__ . '/../app/Services/CredentialVerificationService.php';
 
 use App\Services\CardVerificationService;
+use App\Services\CredentialVerificationService;
 
 $guid = strtolower(trim((string) ($_GET['guid'] ?? $_GET['id'] ?? $_GET['card'] ?? '')));
+$credentialType = strtolower(trim((string) ($_GET['credential'] ?? '')));
+$credentialToken = strtolower(trim((string) ($_GET['token'] ?? '')));
 $result = ['state' => 'INVALID', 'card' => null];
+$credentialResult = ['state' => 'INVALID', 'credential' => null];
+$credential = null;
 $organizationName = 'NDC Identity System';
 $error = '';
 
@@ -22,16 +28,21 @@ try {
         error_log('Card verification settings lookup failed: ' . $settingsException->getMessage() . ' in ' . $settingsException->getFile() . ':' . $settingsException->getLine());
     }
 
-    $result = (new CardVerificationService(new CardRepository($connection)))->verify($guid);
+    if (in_array($credentialType, ['certificate', 'transcript'], true)) {
+        $credentialResult = (new CredentialVerificationService($connection))->verify($credentialType, $credentialToken);
+        $credential = $credentialResult['credential'];
+    } else {
+        $result = (new CardVerificationService(new CardRepository($connection)))->verify($guid);
+    }
 } catch (Throwable $exception) {
     http_response_code(503);
     $previous = $exception->getPrevious();
     $previousMessage = $previous instanceof Throwable ? ' Previous: ' . $previous->getMessage() : '';
-    error_log('Card verification failed for GUID ' . ($guid !== '' ? $guid : '[missing]') . ': ' . $exception->getMessage() . $previousMessage . ' in ' . $exception->getFile() . ':' . $exception->getLine());
+    error_log('Credential verification failed: ' . $exception->getMessage() . $previousMessage . ' in ' . $exception->getFile() . ':' . $exception->getLine());
     $error = 'Verification is temporarily unavailable. Please contact the institution.';
 }
 
-$state = (string) $result['state'];
+$state = $credentialType !== '' ? (string) $credentialResult['state'] : (string) $result['state'];
 $card = $result['card'];
 $isValid = $state === 'VALID';
 $statusClass = match ($state) {
@@ -46,12 +57,27 @@ $statusTitle = match ($state) {
     'REVOKED' => 'CARD REVOKED',
     default => 'INVALID CARD',
 };
+$credentialLabel = $credentialType === 'certificate' ? 'CERTIFICATE' : ($credentialType === 'transcript' ? 'TRANSCRIPT' : 'CARD');
+if ($credentialType !== '') {
+    $statusTitle = match ($state) {
+        'VALID' => 'VALID ' . $credentialLabel,
+        'REVOKED' => $credentialLabel . ' REVOKED',
+        default => 'INVALID ' . $credentialLabel,
+    };
+}
 $statusMessage = match ($state) {
     'VALID' => 'This is an active, officially issued identity card.',
     'EXPIRED' => 'This card was issued but is no longer active because it has expired.',
     'REVOKED' => 'This card was issued but has been revoked and is not valid.',
     default => 'This identity card could not be verified.',
 };
+if ($credentialType !== '') {
+    $statusMessage = match ($state) {
+        'VALID' => 'This is an officially issued academic credential.',
+        'REVOKED' => 'This credential was issued but has since been revoked.',
+        default => 'This academic credential could not be verified.',
+    };
+}
 
 $photoUrl = '';
 if (is_array($card)) {
@@ -107,7 +133,17 @@ function displayDate(string $date): string
                     <p class="mb-0"><?= e($error) ?></p>
                 <?php else: ?>
                     <p class="text-muted mb-4"><?= e($statusMessage) ?></p>
-                    <?php if (is_array($card)): ?>
+                    <?php if (is_array($credential)): ?>
+                        <h2 class="h4 mb-1"><?= e(trim((string) ($credential['first_name'] ?? '') . ' ' . (string) ($credential['last_name'] ?? ''))) ?></h2>
+                        <p class="text-muted mb-4">Student ID: <?= e((string) ($credential['student_number'] ?? '')) ?></p>
+                        <div class="row text-start g-3 border-top pt-4">
+                            <div class="col-sm-6"><div class="detail-label">Credential</div><div><?= e((string) ($credential['credential_number'] ?? '')) ?></div></div>
+                            <div class="col-sm-6"><div class="detail-label">Credential type</div><div><?= e(ucfirst($credentialType)) ?></div></div>
+                            <div class="col-sm-6"><div class="detail-label">Programme</div><div><?= e((string) ($credential['programme_code'] ?? '') . ' - ' . (string) ($credential['programme_name'] ?? '')) ?></div></div>
+                            <div class="col-sm-6"><div class="detail-label">Issued</div><div><?= e(displayDate((string) ($credential['issued_at'] ?? ''))) ?></div></div>
+                            <?php if ($state === 'REVOKED'): ?><div class="col-12"><div class="detail-label">Revocation reason</div><div><?= e((string) ($credential['revocation_reason'] ?? 'Not supplied')) ?></div></div><?php endif; ?>
+                        </div>
+                    <?php elseif (is_array($card)): ?>
                         <?php if ($photoUrl !== ''): ?>
                             <img class="student-photo rounded-circle mb-3" src="<?= e($photoUrl) ?>" alt="Student photo">
                         <?php endif; ?>
@@ -122,7 +158,7 @@ function displayDate(string $date): string
                     <?php endif; ?>
                     <div class="border-top mt-4 pt-3 text-start">
                         <div class="detail-label">Verification ID</div>
-                        <div class="guid small"><?= e($guid !== '' ? $guid : 'Not supplied') ?></div>
+                        <div class="guid small"><?= e($credentialType !== '' ? ($credentialToken !== '' ? $credentialToken : 'Not supplied') : ($guid !== '' ? $guid : 'Not supplied')) ?></div>
                     </div>
                     <p class="small text-muted mt-4 mb-0">For assistance, please contact <?= e($organizationName) ?>.</p>
                 <?php endif; ?>
