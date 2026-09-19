@@ -55,8 +55,17 @@ try {
 
     $certificates = $repository->all();
 } catch (Throwable $exception) {
-    $students = $programmes = $certificates = [];
-    $errors[] = 'Certificates are unavailable. Run database/migrations/20260919_create_academic_certificates.sql. ' . $exception->getMessage();
+    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        $errors[] = $exception->getMessage();
+        try {
+            $certificates = isset($repository) ? $repository->all() : [];
+        } catch (Throwable $ignored) {
+            $certificates = [];
+        }
+    } else {
+        $students = $programmes = $certificates = [];
+        $errors[] = 'Certificates are unavailable. Apply database/migrations/20260919_create_academic_certificates.sql. ' . $exception->getMessage();
+    }
 }
 
 function e(string $value): string

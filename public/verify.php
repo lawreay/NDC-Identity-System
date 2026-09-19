@@ -4,7 +4,6 @@ require_once __DIR__ . '/../app/Database.php';
 require_once __DIR__ . '/../app/CardRepository.php';
 require_once __DIR__ . '/../app/SettingsRepository.php';
 require_once __DIR__ . '/../app/Services/CardVerificationService.php';
-require_once __DIR__ . '/../app/Services/CredentialVerificationService.php';
 
 use App\Services\CardVerificationService;
 use App\Services\CredentialVerificationService;
@@ -12,6 +11,10 @@ use App\Services\CredentialVerificationService;
 $guid = strtolower(trim((string) ($_GET['guid'] ?? $_GET['id'] ?? $_GET['card'] ?? '')));
 $credentialType = strtolower(trim((string) ($_GET['credential'] ?? '')));
 $credentialToken = strtolower(trim((string) ($_GET['token'] ?? '')));
+$isCredentialRequest = in_array($credentialType, ['certificate', 'transcript'], true);
+if ($isCredentialRequest) {
+    require_once __DIR__ . '/../app/Services/CredentialVerificationService.php';
+}
 $result = ['state' => 'INVALID', 'card' => null];
 $credentialResult = ['state' => 'INVALID', 'credential' => null];
 $credential = null;
@@ -28,7 +31,7 @@ try {
         error_log('Card verification settings lookup failed: ' . $settingsException->getMessage() . ' in ' . $settingsException->getFile() . ':' . $settingsException->getLine());
     }
 
-    if (in_array($credentialType, ['certificate', 'transcript'], true)) {
+    if ($isCredentialRequest) {
         $credentialResult = (new CredentialVerificationService($connection))->verify($credentialType, $credentialToken);
         $credential = $credentialResult['credential'];
     } else {
@@ -42,7 +45,7 @@ try {
     $error = 'Verification is temporarily unavailable. Please contact the institution.';
 }
 
-$state = $credentialType !== '' ? (string) $credentialResult['state'] : (string) $result['state'];
+$state = $isCredentialRequest ? (string) $credentialResult['state'] : (string) $result['state'];
 $card = $result['card'];
 $isValid = $state === 'VALID';
 $statusClass = match ($state) {
@@ -58,7 +61,7 @@ $statusTitle = match ($state) {
     default => 'INVALID CARD',
 };
 $credentialLabel = $credentialType === 'certificate' ? 'CERTIFICATE' : ($credentialType === 'transcript' ? 'TRANSCRIPT' : 'CARD');
-if ($credentialType !== '') {
+if ($isCredentialRequest) {
     $statusTitle = match ($state) {
         'VALID' => 'VALID ' . $credentialLabel,
         'REVOKED' => $credentialLabel . ' REVOKED',
@@ -71,7 +74,7 @@ $statusMessage = match ($state) {
     'REVOKED' => 'This card was issued but has been revoked and is not valid.',
     default => 'This identity card could not be verified.',
 };
-if ($credentialType !== '') {
+if ($isCredentialRequest) {
     $statusMessage = match ($state) {
         'VALID' => 'This is an officially issued academic credential.',
         'REVOKED' => 'This credential was issued but has since been revoked.',
@@ -158,7 +161,7 @@ function displayDate(string $date): string
                     <?php endif; ?>
                     <div class="border-top mt-4 pt-3 text-start">
                         <div class="detail-label">Verification ID</div>
-                        <div class="guid small"><?= e($credentialType !== '' ? ($credentialToken !== '' ? $credentialToken : 'Not supplied') : ($guid !== '' ? $guid : 'Not supplied')) ?></div>
+                        <div class="guid small"><?= e($isCredentialRequest ? ($credentialToken !== '' ? $credentialToken : 'Not supplied') : ($guid !== '' ? $guid : 'Not supplied')) ?></div>
                     </div>
                     <p class="small text-muted mt-4 mb-0">For assistance, please contact <?= e($organizationName) ?>.</p>
                 <?php endif; ?>

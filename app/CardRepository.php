@@ -185,14 +185,18 @@ final class CardRepository
         }
     }
 
-    /** @return array<string, mixed>|null */
+    /**
+     * Public verification lookup. This method intentionally performs no schema
+     * preparation: a QR scan must only need SELECT permission.
+     *
+     * @return array<string, mixed>|null
+     */
     public function findByGuid(string $guid): ?array
     {
         $guid = strtolower(trim($guid));
         if (!$this->isGuid($guid)) {
             return null;
         }
-        $this->ensureSchema();
 
         $statement = $this->connection->prepare(
             'SELECT c.id AS card_id, c.student_id, c.guid, c.issued_at, c.expires_at, c.status AS card_status, c.revoked_at,\n                    s.student_number, s.first_name, s.last_name, s.program, s.photo_path, s.status AS student_status\n             FROM student_id_cards c\n             INNER JOIN students s ON s.id = c.student_id\n             WHERE c.guid = :guid\n             LIMIT 1'
@@ -200,7 +204,7 @@ final class CardRepository
         try {
             $statement->execute([':guid' => $guid]);
         } catch (PDOException $exception) {
-            throw new RuntimeException('Card verification is not set up. Apply the student ID card migration.', 0, $exception);
+            throw new RuntimeException('Card verification data is unavailable.', 0, $exception);
         }
 
         $card = $statement->fetch();
