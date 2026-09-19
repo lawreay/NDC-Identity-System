@@ -80,3 +80,24 @@ INSERT IGNORE INTO academic_course_programmes (course_id, programme_id)
 SELECT id, programme_id
 FROM academic_courses
 WHERE programme_id IS NOT NULL;
+
+CREATE TABLE IF NOT EXISTS student_course_completions (
+    id INT NOT NULL AUTO_INCREMENT,
+    student_id INT NOT NULL,
+    course_id INT NOT NULL,
+    academic_term_id INT NOT NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'completed',
+    completed_at DATE NULL,
+    remarks VARCHAR(255) NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    UNIQUE KEY student_course_completions_unique (student_id, course_id, academic_term_id),
+    KEY student_course_completions_student_index (student_id),
+    KEY student_course_completions_course_index (course_id),
+    KEY student_course_completions_term_index (academic_term_id),
+    KEY student_course_completions_status_index (status),
+    CONSTRAINT student_course_completions_student_fk FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT student_course_completions_course_fk FOREIGN KEY (course_id) REFERENCES academic_courses(id) ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT student_course_completions_term_fk FOREIGN KEY (academic_term_id) REFERENCES academic_terms(id) ON DELETE RESTRICT ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

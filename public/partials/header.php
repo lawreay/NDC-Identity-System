@@ -8,7 +8,7 @@ $userName = (string) ($user['name'] ?? 'User');
 $userRole = (string) ($user['role'] ?? '');
 $currentPage = basename((string) ($_SERVER['PHP_SELF'] ?? ''));
 $studentPages = ['students.php', 'student-profile.php', 'student-form.php', 'student-id-card.php', 'student-data-export.php', 'export-student-data.php'];
-$academicPages = ['academic-dashboard.php', 'academic-programmes.php', 'academic-courses.php', 'academic-terms.php', 'academic-enrolments.php'];
+$academicPages = ['academic-dashboard.php', 'academic-programmes.php', 'academic-courses.php', 'academic-terms.php', 'academic-enrolments.php', 'academic-results.php', 'academic-checksheet.php', 'academic-eligibility.php', 'academic-certificates.php', 'academic-completions.php'];
 ?><nav class="navbar navbar-expand-lg navbar-dark ndc-navbar mb-4">
     <div class="container">
         <a class="navbar-brand ndc-brand" href="dashboard.php">

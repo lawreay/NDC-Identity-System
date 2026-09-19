@@ -6,6 +6,8 @@ require_once __DIR__ . '/../app/Auth.php';
 require_once __DIR__ . '/../app/Services/ImageUploadService.php';
 require_once __DIR__ . '/../app/TemplateDesigner/TemplateDesignerService.php';
 require_once __DIR__ . '/../app/StudentEnrolmentRepository.php';
+require_once __DIR__ . '/../app/StudentCourseCompletionRepository.php';
+require_once __DIR__ . '/../app/StudentResultRepository.php';
 
 use App\Auth;
 use App\Services\ImageUploadService;
@@ -24,6 +26,8 @@ $cardRepository = null;
 $templates = [];
 $defaultTemplateId = '';
 $academicEnrolments = [];
+$courseCompletions = [];
+$academicResults = [];
 
 try {
     $repository = new StudentRepository(Database::getConnection());
@@ -164,6 +168,18 @@ if ($student) {
         $academicEnrolments = (new StudentEnrolmentRepository(Database::getConnection()))->forStudent($id);
     } catch (Throwable $exception) {
         $academicEnrolments = [];
+    }
+
+    try {
+        $courseCompletions = (new StudentCourseCompletionRepository(Database::getConnection()))->forStudent($id);
+    } catch (Throwable $exception) {
+        $courseCompletions = [];
+    }
+
+    try {
+        $academicResults = (new StudentResultRepository(Database::getConnection()))->forStudent($id);
+    } catch (Throwable $exception) {
+        $academicResults = [];
     }
 }
 
@@ -419,7 +435,12 @@ if (isset($_GET['created'])) {
                                         <h2 class="h5 mb-1">Academic enrolments</h2>
                                         <p class="text-muted small mb-0">Programme assignments from the Academic module.</p>
                                     </div>
-                                    <a href="academic-enrolments.php" class="btn btn-outline-primary btn-sm"><i class="bi bi-mortarboard-fill me-1" aria-hidden="true"></i>Manage enrolments</a>
+                                    <div class="d-flex flex-wrap gap-2">
+                                        <a href="academic-checksheet.php?student_id=<?= (int) $id ?>" class="btn btn-outline-secondary btn-sm"><i class="bi bi-list-check me-1" aria-hidden="true"></i>View checksheet</a>
+                                        <a href="academic-eligibility.php?student_id=<?= (int) $id ?>" class="btn btn-outline-success btn-sm"><i class="bi bi-patch-check me-1" aria-hidden="true"></i>Assess eligibility</a>
+                                        <a href="academic-certificates.php" class="btn btn-outline-warning btn-sm"><i class="bi bi-award me-1" aria-hidden="true"></i>Certificates</a>
+                                        <a href="academic-enrolments.php" class="btn btn-outline-primary btn-sm"><i class="bi bi-mortarboard-fill me-1" aria-hidden="true"></i>Manage enrolments</a>
+                                    </div>
                                 </div>
                                 <?php if ($academicEnrolments === []): ?>
                                     <div class="alert alert-light border mb-4">No academic enrolment recorded yet.</div>
@@ -434,6 +455,61 @@ if (isset($_GET['created'])) {
                                                     <td><?= htmlspecialchars(trim((string) ($enrolment['academic_year'] ?? '') . ' ' . (string) ($enrolment['term_name'] ?? '') . ' ' . (string) ($enrolment['semester'] ?? '')), ENT_QUOTES, 'UTF-8') ?></td>
                                                     <td><?= htmlspecialchars((string) ($enrolment['enrolled_at'] ?? ''), ENT_QUOTES, 'UTF-8') ?></td>
                                                     <td><span class="badge text-bg-secondary"><?= htmlspecialchars((string) ($enrolment['status'] ?? ''), ENT_QUOTES, 'UTF-8') ?></span></td>
+                                                </tr>
+                                            <?php endforeach; ?>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                <?php endif; ?>
+
+                                <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
+                                    <div>
+                                        <h2 class="h5 mb-1">Academic results</h2>
+                                        <p class="text-muted small mb-0">Recorded marks and their approval status.</p>
+                                    </div>
+                                    <a href="academic-results.php" class="btn btn-outline-primary btn-sm"><i class="bi bi-clipboard-data-fill me-1" aria-hidden="true"></i>Manage results</a>
+                                </div>
+                                <?php if ($academicResults === []): ?>
+                                    <div class="alert alert-light border mb-4">No academic results recorded yet.</div>
+                                <?php else: ?>
+                                    <div class="table-responsive mb-4">
+                                        <table class="table table-sm align-middle">
+                                            <thead><tr><th>Course</th><th>Term</th><th class="text-end">Mark</th><th>Grade</th><th>Status</th></tr></thead>
+                                            <tbody>
+                                            <?php foreach ($academicResults as $result): ?>
+                                                <tr>
+                                                    <td><?= htmlspecialchars((string) ($result['course_code'] ?? '') . ' - ' . (string) ($result['course_name'] ?? ''), ENT_QUOTES, 'UTF-8') ?></td>
+                                                    <td><?= htmlspecialchars(trim((string) ($result['academic_year'] ?? '') . ' ' . (string) ($result['term_name'] ?? '') . ' ' . (string) ($result['semester'] ?? '')), ENT_QUOTES, 'UTF-8') ?></td>
+                                                    <td class="text-end"><?= htmlspecialchars(number_format((float) ($result['mark'] ?? 0), 2), ENT_QUOTES, 'UTF-8') ?></td>
+                                                    <td><?= htmlspecialchars((string) ($result['grade'] ?? ''), ENT_QUOTES, 'UTF-8') ?></td>
+                                                    <td><span class="badge text-bg-<?= ($result['status'] ?? '') === 'approved' ? 'success' : (($result['status'] ?? '') === 'void' ? 'danger' : 'warning') ?>"><?= htmlspecialchars((string) ($result['status'] ?? ''), ENT_QUOTES, 'UTF-8') ?></span></td>
+                                                </tr>
+                                            <?php endforeach; ?>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                <?php endif; ?>
+
+                                <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
+                                    <div>
+                                        <h2 class="h5 mb-1">Completed courses</h2>
+                                        <p class="text-muted small mb-0">Course completion records from the Academic module.</p>
+                                    </div>
+                                    <a href="academic-completions.php" class="btn btn-outline-success btn-sm"><i class="bi bi-check2-square me-1" aria-hidden="true"></i>Manage completions</a>
+                                </div>
+                                <?php if ($courseCompletions === []): ?>
+                                    <div class="alert alert-light border mb-4">No completed courses recorded yet.</div>
+                                <?php else: ?>
+                                    <div class="table-responsive mb-4">
+                                        <table class="table table-sm align-middle">
+                                            <thead><tr><th>Course</th><th>Term</th><th>Status</th><th>Date</th></tr></thead>
+                                            <tbody>
+                                            <?php foreach ($courseCompletions as $completion): ?>
+                                                <tr>
+                                                    <td><?= htmlspecialchars((string) ($completion['course_code'] ?? '') . ' - ' . (string) ($completion['course_name'] ?? ''), ENT_QUOTES, 'UTF-8') ?></td>
+                                                    <td><?= htmlspecialchars(trim((string) ($completion['academic_year'] ?? '') . ' ' . (string) ($completion['term_name'] ?? '') . ' ' . (string) ($completion['semester'] ?? '')), ENT_QUOTES, 'UTF-8') ?></td>
+                                                    <td><span class="badge text-bg-<?= ($completion['status'] ?? '') === 'completed' ? 'success' : 'secondary' ?>"><?= htmlspecialchars((string) ($completion['status'] ?? ''), ENT_QUOTES, 'UTF-8') ?></span></td>
+                                                    <td><?= htmlspecialchars((string) ($completion['completed_at'] ?? ''), ENT_QUOTES, 'UTF-8') ?></td>
                                                 </tr>
                                             <?php endforeach; ?>
                                             </tbody>

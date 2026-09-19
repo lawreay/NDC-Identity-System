@@ -6,7 +6,7 @@ use App\Auth;
 
 Auth::requireLogin();
 
-$stats = ['programmes' => 0, 'courses' => 0, 'terms' => 0, 'enrolments' => 0];
+$stats = ['programmes' => 0, 'courses' => 0, 'terms' => 0, 'enrolments' => 0, 'results' => 0, 'completions' => 0];
 $error = '';
 
 try {
@@ -15,6 +15,8 @@ try {
     $stats['courses'] = (int) $connection->query('SELECT COUNT(*) FROM academic_courses')->fetchColumn();
     $stats['terms'] = (int) $connection->query('SELECT COUNT(*) FROM academic_terms')->fetchColumn();
     $stats['enrolments'] = (int) $connection->query('SELECT COUNT(*) FROM student_enrolments')->fetchColumn();
+    $stats['results'] = (int) $connection->query('SELECT COUNT(*) FROM student_results')->fetchColumn();
+    $stats['completions'] = (int) $connection->query('SELECT COUNT(*) FROM student_course_completions')->fetchColumn();
 } catch (Throwable $exception) {
     $error = 'Academic tables are not ready. Run database/migrations/20260919_create_academic_foundation.sql first.';
 }
@@ -40,7 +42,7 @@ function e(string $value): string
         <div>
             <div class="ndc-eyebrow"><i class="bi bi-mortarboard-fill me-1" aria-hidden="true"></i>Academic Foundation</div>
             <h1 class="h3 mb-1">Academic Dashboard</h1>
-            <p class="text-muted mb-0">Manage programmes, courses, terms, and student enrolments.</p>
+            <p class="text-muted mb-0">Manage programmes, courses, terms, enrolments, results, and course completions.</p>
         </div>
     </div>
     <?php require __DIR__ . '/partials/academic-nav.php'; ?>
@@ -48,8 +50,8 @@ function e(string $value): string
         <div class="alert alert-warning"><?= e($error) ?></div>
     <?php endif; ?>
     <div class="row g-3">
-        <?php foreach ([['Programmes', 'programmes', 'bi-diagram-3-fill'], ['Courses', 'courses', 'bi-journal-bookmark-fill'], ['Terms', 'terms', 'bi-calendar3'], ['Enrolments', 'enrolments', 'bi-person-check-fill']] as $item): ?>
-            <div class="col-md-3">
+        <?php foreach ([['Programmes', 'programmes', 'bi-diagram-3-fill'], ['Courses', 'courses', 'bi-journal-bookmark-fill'], ['Terms', 'terms', 'bi-calendar3'], ['Enrolments', 'enrolments', 'bi-person-check-fill'], ['Results', 'results', 'bi-clipboard-data-fill'], ['Completions', 'completions', 'bi-check2-square']] as $item): ?>
+            <div class="col-md-6 col-xl">
                 <div class="ndc-stat-card">
                     <span class="ndc-stat-icon ndc-stat-icon-blue"><i class="bi <?= e($item[2]) ?>" aria-hidden="true"></i></span>
                     <div><span class="ndc-stat-label"><?= e($item[0]) ?></span><strong><?= number_format($stats[$item[1]]) ?></strong><small>Academic foundation</small></div>
