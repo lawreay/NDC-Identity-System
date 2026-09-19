@@ -4,12 +4,10 @@ require_once __DIR__ . '/../app/StudentRepository.php';
 require_once __DIR__ . '/../app/CardRepository.php';
 require_once __DIR__ . '/../app/Auth.php';
 require_once __DIR__ . '/../app/Services/ImageUploadService.php';
-require_once __DIR__ . '/../app/Services/StudentDataExportService.php';
 require_once __DIR__ . '/../app/TemplateDesigner/TemplateDesignerService.php';
 
 use App\Auth;
 use App\Services\ImageUploadService;
-use App\Services\StudentDataExportService;
 
 Auth::requireLogin();
 
@@ -24,8 +22,6 @@ $card = null;
 $cardRepository = null;
 $templates = [];
 $defaultTemplateId = '';
-$exportFields = StudentDataExportService::availableFields();
-$defaultExportFields = StudentDataExportService::defaultFields();
 
 try {
     $repository = new StudentRepository(Database::getConnection());
@@ -207,6 +203,9 @@ if (isset($_GET['created'])) {
                     <a href="student-id-card.php?id=<?= (int) ($student['id'] ?? 0) ?>" class="btn btn-outline-primary btn-sm">
                         Preview Card
                     </a>
+                    <a href="student-data-export.php?student_id=<?= (int) ($student['id'] ?? 0) ?>" class="btn btn-outline-success btn-sm">
+                        <i class="bi bi-file-earmark-spreadsheet me-1" aria-hidden="true"></i>Export Data
+                    </a>
                     <?php if ((Auth::user()['role'] ?? '') === 'Administrator'): ?>
                         <form method="post" onsubmit="return confirm('Delete this student permanently? Their ID card history will also be removed.');">
                             <input type="hidden" name="_csrf" value="<?= htmlspecialchars(Auth::csrfToken(), ENT_QUOTES, 'UTF-8') ?>">
@@ -254,31 +253,6 @@ if (isset($_GET['created'])) {
             <?php if ($profileMessage !== ''): ?>
                 <div class="alert alert-<?= htmlspecialchars($profileMessageType, ENT_QUOTES, 'UTF-8') ?>"><?= htmlspecialchars($profileMessage, ENT_QUOTES, 'UTF-8') ?></div>
             <?php endif; ?>
-
-            <form method="post" action="export-student-data.php" class="card shadow-sm mb-4">
-                <div class="card-body">
-                    <input type="hidden" name="_csrf" value="<?= htmlspecialchars(Auth::csrfToken(), ENT_QUOTES, 'UTF-8') ?>">
-                    <input type="hidden" name="student_ids[]" value="<?= (int) ($student['id'] ?? 0) ?>">
-                    <div class="d-flex flex-wrap justify-content-between align-items-start gap-3">
-                        <div>
-                            <h2 class="h5 mb-1">Export student data</h2>
-                            <p class="text-muted mb-0">Choose the profile fields to include for this student.</p>
-                        </div>
-                        <div class="btn-group">
-                            <button type="submit" name="export_format" value="csv" class="btn btn-outline-success btn-sm"><i class="bi bi-file-earmark-spreadsheet me-1" aria-hidden="true"></i>Excel CSV</button>
-                            <button type="submit" name="export_format" value="pdf" class="btn btn-outline-danger btn-sm"><i class="bi bi-file-earmark-pdf me-1" aria-hidden="true"></i>PDF</button>
-                        </div>
-                    </div>
-                    <div class="ndc-export-fields mt-3">
-                        <?php foreach ($exportFields as $field => $label): ?>
-                            <label class="form-check">
-                                <input class="form-check-input" type="checkbox" name="export_fields[]" value="<?= htmlspecialchars($field, ENT_QUOTES, 'UTF-8') ?>" <?= in_array($field, $defaultExportFields, true) ? 'checked' : '' ?>>
-                                <span class="form-check-label"><?= htmlspecialchars($label, ENT_QUOTES, 'UTF-8') ?></span>
-                            </label>
-                        <?php endforeach; ?>
-                    </div>
-                </div>
-            </form>
 
             <div class="card shadow-sm">
                 <div class="card-body">

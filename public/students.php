@@ -3,18 +3,14 @@ require_once __DIR__ . '/../app/Database.php';
 require_once __DIR__ . '/../app/StudentRepository.php';
 require_once __DIR__ . '/../app/TemplateDesigner/TemplateDesignerService.php';
 require_once __DIR__ . '/../app/Auth.php';
-require_once __DIR__ . '/../app/Services/StudentDataExportService.php';
 
 use App\Auth;
-use App\Services\StudentDataExportService;
 
 Auth::requireLogin();
 
 $search = trim($_GET['search'] ?? '');
 $templates = [];
 $defaultTemplateId = null;
-$exportFields = StudentDataExportService::availableFields();
-$defaultExportFields = StudentDataExportService::defaultFields();
 
 try {
     $templateService = new TemplateDesignerService();
@@ -60,6 +56,7 @@ $notice = isset($_GET['deleted']) ? 'Student deleted successfully.' : '';
             </div>
             <div class="d-flex gap-2">
                 <a href="student-form.php" class="btn btn-primary"><i class="bi bi-person-plus-fill me-1" aria-hidden="true"></i>Add Student</a>
+                <a href="student-data-export.php" class="btn btn-outline-success"><i class="bi bi-file-earmark-spreadsheet me-1" aria-hidden="true"></i>Data Export</a>
                 <a href="template-designer.php" class="btn btn-outline-primary"><i class="bi bi-palette me-1" aria-hidden="true"></i>Template Designer</a>
             </div>
         </div>
@@ -126,26 +123,6 @@ $notice = isset($_GET['deleted']) ? 'Student deleted successfully.' : '';
                             <button type="submit" name="export_format" value="pdf" class="btn btn-primary js-bulk-export" disabled><i class="bi bi-file-earmark-pdf me-1" aria-hidden="true"></i>Export PDF</button>
                             <button type="submit" name="export_format" value="png_zip" class="btn btn-outline-primary js-bulk-export" disabled><i class="bi bi-file-earmark-zip me-1" aria-hidden="true"></i>Export PNG ZIP</button>
                         </div>
-                    </div>
-                </div>
-                <div class="ndc-bulk-toolbar mb-3">
-                    <div class="d-flex flex-wrap justify-content-between align-items-start gap-3">
-                        <div>
-                            <div class="fw-semibold">Export selected student data</div>
-                            <small class="text-muted">Choose the fields to include, then download an Excel CSV or PDF report.</small>
-                        </div>
-                        <div class="btn-group">
-                            <button type="submit" formaction="export-student-data.php" name="export_format" value="csv" class="btn btn-outline-success js-bulk-export" disabled><i class="bi bi-file-earmark-spreadsheet me-1" aria-hidden="true"></i>Excel CSV</button>
-                            <button type="submit" formaction="export-student-data.php" name="export_format" value="pdf" class="btn btn-outline-danger js-bulk-export" disabled><i class="bi bi-file-earmark-pdf me-1" aria-hidden="true"></i>Data PDF</button>
-                        </div>
-                    </div>
-                    <div class="ndc-export-fields mt-3">
-                        <?php foreach ($exportFields as $field => $label): ?>
-                            <label class="form-check">
-                                <input class="form-check-input" type="checkbox" name="export_fields[]" value="<?= htmlspecialchars($field, ENT_QUOTES, 'UTF-8') ?>" <?= in_array($field, $defaultExportFields, true) ? 'checked' : '' ?>>
-                                <span class="form-check-label"><?= htmlspecialchars($label, ENT_QUOTES, 'UTF-8') ?></span>
-                            </label>
-                        <?php endforeach; ?>
                     </div>
                 </div>
             <div class="table-responsive">
