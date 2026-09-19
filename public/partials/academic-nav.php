@@ -10,6 +10,7 @@
             <a href="academic-checksheet.php" class="btn <?= basename((string) ($_SERVER['PHP_SELF'] ?? '')) === 'academic-checksheet.php' ? 'btn-primary' : 'btn-outline-secondary' ?>">Checksheet</a>
             <a href="academic-eligibility.php" class="btn <?= basename((string) ($_SERVER['PHP_SELF'] ?? '')) === 'academic-eligibility.php' ? 'btn-primary' : 'btn-outline-secondary' ?>">Eligibility</a>
             <a href="academic-certificates.php" class="btn <?= basename((string) ($_SERVER['PHP_SELF'] ?? '')) === 'academic-certificates.php' ? 'btn-primary' : 'btn-outline-secondary' ?>">Certificates</a>
+            <a href="academic-transcripts.php" class="btn <?= basename((string) ($_SERVER['PHP_SELF'] ?? '')) === 'academic-transcripts.php' ? 'btn-primary' : 'btn-outline-secondary' ?>">Transcripts</a>
             <a href="academic-completions.php" class="btn <?= basename((string) ($_SERVER['PHP_SELF'] ?? '')) === 'academic-completions.php' ? 'btn-primary' : 'btn-outline-secondary' ?>">Completions</a>
         </div>
     </div>
