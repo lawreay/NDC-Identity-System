@@ -158,6 +158,11 @@ function displayDate(string $date): string
                             <div class="col-sm-6"><div class="detail-label">Issued</div><div><?= e(displayDate((string) ($card['issued_at'] ?? ''))) ?></div></div>
                             <div class="col-sm-6"><div class="detail-label">Expires</div><div><?= e(displayDate((string) ($card['expires_at'] ?? ''))) ?></div></div>
                         </div>
+                        <?php if ($isValid): ?>
+                            <div class="border-top mt-4 pt-3">
+                                <a class="btn btn-primary w-100" href="student-academic-records.php?guid=<?= e(rawurlencode($guid)) ?>"><i class="bi bi-mortarboard me-1"></i>View academic records</a>
+                            </div>
+                        <?php endif; ?>
                     <?php endif; ?>
                     <div class="border-top mt-4 pt-3 text-start">
                         <div class="detail-label">Verification ID</div>

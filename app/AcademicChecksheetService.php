@@ -111,14 +111,14 @@ final class AcademicChecksheetService
     private function programmeForStudent(int $studentId, int $programmeId): ?array
     {
         $statement = $this->connection->prepare(
-            'SELECT p.id, p.code, p.name, p.qualification, e.status AS enrolment_status, e.enrolled_at
+            "SELECT p.id, p.code, p.name, p.qualification, e.status AS enrolment_status, e.enrolled_at
              FROM student_enrolments e
              INNER JOIN academic_programmes p ON p.id = e.programme_id
              WHERE e.student_id = :student_id
                AND (:programme_id = 0 OR e.programme_id = :selected_programme_id)
-             ORDER BY CASE e.status WHEN "active" THEN 0 WHEN "completed" THEN 1 ELSE 2 END,
+             ORDER BY CASE e.status WHEN 'active' THEN 0 WHEN 'completed' THEN 1 ELSE 2 END,
                       e.enrolled_at DESC, e.id DESC
-             LIMIT 1'
+             LIMIT 1"
         );
         $statement->execute([
             ':student_id' => $studentId,
@@ -134,11 +134,11 @@ final class AcademicChecksheetService
     private function coursesForProgramme(int $programmeId): array
     {
         $statement = $this->connection->prepare(
-            'SELECT c.id, c.code, c.name, c.credits, c.semester, c.course_type, c.is_compulsory, c.status
+            "SELECT c.id, c.code, c.name, c.credits, c.semester, c.course_type, c.is_compulsory, c.status
              FROM academic_course_programmes cp
              INNER JOIN academic_courses c ON c.id = cp.course_id
              WHERE cp.programme_id = :programme_id
-             ORDER BY COALESCE(c.semester, ""), c.code, c.name'
+             ORDER BY COALESCE(c.semester, ''), c.code, c.name"
         );
         $statement->execute([':programme_id' => $programmeId]);
 
@@ -149,7 +149,7 @@ final class AcademicChecksheetService
     private function completionsForProgramme(int $studentId, int $programmeId): array
     {
         $statement = $this->connection->prepare(
-            'SELECT cc.course_id, cc.status, cc.completed_at, cc.remarks
+            "SELECT cc.course_id, cc.status, cc.completed_at, cc.remarks
              FROM student_course_completions cc
              INNER JOIN academic_course_programmes cp
                 ON cp.course_id = cc.course_id AND cp.programme_id = :programme_id
@@ -161,8 +161,8 @@ final class AcademicChecksheetService
                      AND e.academic_term_id = cc.academic_term_id
                )
              ORDER BY cc.course_id,
-                      CASE cc.status WHEN "completed" THEN 0 WHEN "exempted" THEN 1 WHEN "incomplete" THEN 2 ELSE 3 END,
-                      cc.completed_at DESC, cc.id DESC'
+                      CASE cc.status WHEN 'completed' THEN 0 WHEN 'exempted' THEN 1 WHEN 'incomplete' THEN 2 ELSE 3 END,
+                      cc.completed_at DESC, cc.id DESC"
         );
         $statement->execute([
             ':student_id' => $studentId,
@@ -177,19 +177,19 @@ final class AcademicChecksheetService
     private function approvedResultsForProgramme(int $studentId, int $programmeId): array
     {
         $statement = $this->connection->prepare(
-            'SELECT r.course_id, r.mark, r.grade, r.status, r.assessed_at
+            "SELECT r.course_id, r.mark, r.grade, r.status, r.assessed_at
              FROM student_results r
              INNER JOIN academic_course_programmes cp
                 ON cp.course_id = r.course_id AND cp.programme_id = :programme_id
              WHERE r.student_id = :student_id
-               AND r.status = "approved"
+               AND r.status = 'approved'
                AND EXISTS (
                    SELECT 1 FROM student_enrolments e
                    WHERE e.student_id = r.student_id
                      AND e.programme_id = :enrolment_programme_id
                      AND e.academic_term_id = r.academic_term_id
                )
-             ORDER BY r.course_id, r.assessed_at DESC, r.id DESC'
+             ORDER BY r.course_id, r.assessed_at DESC, r.id DESC"
         );
         $statement->execute([
             ':student_id' => $studentId,
