@@ -81,6 +81,49 @@ final class AppUpdateService
         return $packages;
     }
 
+    /**
+     * @return array<int, array{name: string, path: string, size: int, modified_at: int}>
+     */
+    public function listBackups(): array
+    {
+        $backups = [];
+        foreach (glob($this->backupsPath . DIRECTORY_SEPARATOR . 'backup_*') ?: [] as $path) {
+            if (!is_dir($path)) {
+                continue;
+            }
+
+            $backups[] = [
+                'name' => basename($path),
+                'path' => $path,
+                'size' => $this->directorySize($path),
+                'modified_at' => filemtime($path) ?: 0,
+            ];
+        }
+
+        usort($backups, static fn (array $left, array $right): int => $right['modified_at'] <=> $left['modified_at']);
+
+        return $backups;
+    }
+
+    public function restoreNamedBackup(string $backupName): void
+    {
+        $backupPath = $this->resolveBackupPath($backupName);
+        $this->removeFilesNotInBackup($backupPath);
+        $this->restoreBackup($backupPath);
+        @unlink($this->pendingFilePath());
+    }
+
+    public function deleteBackup(string $backupName): void
+    {
+        $backupPath = $this->resolveBackupPath($backupName);
+        $pending = $this->pendingUpdate();
+        if ($pending !== null && realpath((string) ($pending['backup_path'] ?? '')) === realpath($backupPath)) {
+            throw new RuntimeException('The backup for the pending update cannot be deleted until the update is confirmed or rolled back.');
+        }
+
+        $this->removeDirectory($backupPath);
+    }
+
     public function storeUploadedPackage(array $file): string
     {
         if (($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
@@ -258,6 +301,22 @@ final class AppUpdateService
         return $realPath;
     }
 
+    private function resolveBackupPath(string $backupName): string
+    {
+        $backupName = trim($backupName);
+        if ($backupName === '' || basename($backupName) !== $backupName || !str_starts_with($backupName, 'backup_')) {
+            throw new RuntimeException('Invalid update backup path.');
+        }
+
+        $realBackups = realpath($this->backupsPath);
+        $realPath = realpath($this->backupsPath . DIRECTORY_SEPARATOR . $backupName);
+        if ($realBackups === false || $realPath === false || !is_dir($realPath) || !str_starts_with($realPath, $realBackups . DIRECTORY_SEPARATOR)) {
+            throw new RuntimeException('Update backup was not found.');
+        }
+
+        return $realPath;
+    }
+
     private function assertZipPackage(string $packagePath): void
     {
         if (!class_exists(ZipArchive::class)) {
@@ -319,6 +378,28 @@ final class AppUpdateService
     private function restoreBackup(string $backupPath): void
     {
         $this->copyDirectory($backupPath, $this->rootPath, false);
+    }
+
+    private function removeFilesNotInBackup(string $backupPath): void
+    {
+        $iterator = new RecursiveIteratorIterator(
+            $this->filteredDirectoryIterator($this->rootPath, false),
+            RecursiveIteratorIterator::CHILD_FIRST
+        );
+
+        foreach ($iterator as $item) {
+            $relative = $this->relativePath($this->rootPath, $item->getPathname());
+            if ($this->isProtectedRelativePath($relative)) {
+                continue;
+            }
+
+            $backupItem = $backupPath . DIRECTORY_SEPARATOR . $relative;
+            if ($item->isFile() && !is_file($backupItem)) {
+                @unlink($item->getPathname());
+            } elseif ($item->isDir() && !is_dir($backupItem)) {
+                @rmdir($item->getPathname());
+            }
+        }
     }
 
     /**
@@ -487,5 +568,21 @@ final class AppUpdateService
         }
 
         @rmdir($path);
+    }
+
+    private function directorySize(string $path): int
+    {
+        $size = 0;
+        $iterator = new RecursiveIteratorIterator(
+            new RecursiveDirectoryIterator($path, RecursiveDirectoryIterator::SKIP_DOTS)
+        );
+
+        foreach ($iterator as $item) {
+            if ($item->isFile()) {
+                $size += $item->getSize();
+            }
+        }
+
+        return $size;
     }
 }

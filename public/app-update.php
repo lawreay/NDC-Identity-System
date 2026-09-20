@@ -35,6 +35,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } elseif ($action === 'rollback') {
             $service->rollbackPendingUpdate('Update rolled back manually.');
             $success = 'Update rolled back.';
+        } elseif ($action === 'restore_backup') {
+            $service->restoreNamedBackup((string) ($_POST['backup'] ?? ''));
+            $success = 'Application restored from the selected backup.';
+        } elseif ($action === 'delete_backup') {
+            $service->deleteBackup((string) ($_POST['backup'] ?? ''));
+            $success = 'Backup deleted.';
         } elseif ($action === 'download_database_dump') {
             $dumpPath = (new DatabaseDumpService(Database::getConnection()))->createTemporaryDump();
 
@@ -70,6 +76,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 $pending = $service->pendingUpdate();
 $packages = $service->listIncomingPackages();
+$backups = $service->listBackups();
 $incomingPath = dirname(__DIR__) . DIRECTORY_SEPARATOR . 'storage' . DIRECTORY_SEPARATOR . 'updates' . DIRECTORY_SEPARATOR . 'incoming';
 
 function escape(string $value): string
@@ -226,6 +233,51 @@ function formatBytes(int $bytes): string
                     <?php endif; ?>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <div class="card shadow-sm mt-4">
+        <div class="card-body">
+            <div class="d-flex flex-wrap align-items-center gap-3 mb-3">
+                <div>
+                    <h2 class="h5 mb-1">Application Rollback Backups</h2>
+                    <p class="text-muted mb-0">Backups created automatically before each app update.</p>
+                </div>
+            </div>
+            <?php if ($backups === []): ?>
+                <div class="alert alert-info mb-0">No application rollback backups found.</div>
+            <?php else: ?>
+                <div class="table-responsive">
+                    <table class="table table-striped align-middle mb-0">
+                        <thead><tr><th>Backup</th><th>Size</th><th>Created</th><th></th></tr></thead>
+                        <tbody>
+                        <?php foreach ($backups as $backup): ?>
+                            <tr>
+                                <td><code><?= escape($backup['name']) ?></code></td>
+                                <td><?= escape(formatBytes($backup['size'])) ?></td>
+                                <td><?= escape(date('Y-m-d H:i:s', $backup['modified_at'])) ?></td>
+                                <td class="text-end">
+                                    <div class="d-inline-flex gap-1">
+                                        <form method="post" onsubmit="return confirm('Restore this application backup? Current application files will be replaced.');">
+                                            <input type="hidden" name="_csrf" value="<?= escape(Auth::csrfToken()) ?>">
+                                            <input type="hidden" name="action" value="restore_backup">
+                                            <input type="hidden" name="backup" value="<?= escape($backup['name']) ?>">
+                                            <button type="submit" class="btn btn-outline-warning btn-sm" <?= $pending !== null ? 'disabled' : '' ?>>Restore</button>
+                                        </form>
+                                        <form method="post" onsubmit="return confirm('Delete this rollback backup permanently?');">
+                                            <input type="hidden" name="_csrf" value="<?= escape(Auth::csrfToken()) ?>">
+                                            <input type="hidden" name="action" value="delete_backup">
+                                            <input type="hidden" name="backup" value="<?= escape($backup['name']) ?>">
+                                            <button type="submit" class="btn btn-outline-danger btn-sm" <?= $pending !== null ? 'disabled' : '' ?>>Delete</button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+            <?php endif; ?>
         </div>
     </div>
 
