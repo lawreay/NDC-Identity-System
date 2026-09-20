@@ -15,6 +15,7 @@ $template = null;
 $mode = 'list';
 $selectedTemplateId = '';
 $defaultTemplateId = $service->getDefaultTemplateId();
+$defaultCertificateTemplateId = $service->getDefaultTemplateId('certificate');
 
 if (isset($_GET['export']) && is_string($_GET['export']) && $_GET['export'] !== '') {
     $exportPath = $service->exportTemplate($_GET['export']);
@@ -52,9 +53,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         $mode = 'list';
     } elseif ($action === 'set_default' && $templateId !== '') {
-        $service->setDefaultTemplate($templateId);
+        $documentType = (string) ($_POST['document_type'] ?? 'id_card');
+        $documentType = $documentType === 'certificate' ? 'certificate' : 'id_card';
+        $service->setDefaultTemplate($templateId, $documentType);
         $success = 'Default template updated.';
-        $defaultTemplateId = $templateId;
+        if ($documentType === 'certificate') {
+            $defaultCertificateTemplateId = $templateId;
+        } else {
+            $defaultTemplateId = $templateId;
+        }
         $mode = 'list';
     } elseif ($action === 'import') {
         $result = $service->importTemplate($_FILES['template_package'] ?? []);
@@ -68,6 +75,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $input = [
             'name' => trim((string) ($_POST['name'] ?? '')),
             'description' => trim((string) ($_POST['description'] ?? '')),
+            'document_type' => (string) ($_POST['document_type'] ?? 'id_card'),
             'status' => trim((string) ($_POST['status'] ?? 'draft')),
             'front_html' => (string) ($_POST['front_html'] ?? ''),
             'back_html' => (string) ($_POST['back_html'] ?? ''),
@@ -103,6 +111,16 @@ if (isset($_GET['edit']) && is_string($_GET['edit']) && $_GET['edit'] !== '') {
     $mode = 'form';
     $selectedTemplateId = $_GET['edit'];
     $template = $service->getTemplate($selectedTemplateId);
+    if ($template === null && $selectedTemplateId === 'new') {
+        $documentType = (string) ($_GET['type'] ?? 'id_card');
+        $documentType = $documentType === 'certificate' ? 'certificate' : 'id_card';
+        $template = [
+            'document_type' => $documentType,
+            'front_html' => $documentType === 'certificate' ? $service->defaultCertificateHtml() : $service->defaultFrontHtml(),
+            'back_html' => $service->defaultBackHtml(),
+        ];
+        $selectedTemplateId = '';
+    }
 }
 
 if (isset($_GET['preview']) && is_string($_GET['preview']) && $_GET['preview'] !== '') {
@@ -113,6 +131,7 @@ if (isset($_GET['preview']) && is_string($_GET['preview']) && $_GET['preview'] !
 
 $templates = $service->listTemplates();
 $defaultTemplateId = $service->getDefaultTemplateId();
+$defaultCertificateTemplateId = $service->getDefaultTemplateId('certificate');
 
 require_once __DIR__ . '/../app/SettingsRepository.php';
 $settingsRepository = new SettingsRepository(Database::getConnection());
@@ -150,9 +169,20 @@ $theme = SettingsRepository::themeFromSettings($appSettings);
 
 $frontPreview = '';
 $backPreview = '';
+$isCertificateTemplate = $template !== null && (($template['document_type'] ?? 'id_card') === 'certificate');
 if ($template !== null && is_array($template)) {
-    $frontPreview = $service->renderTemplate($template, $student, $organization, $theme, 'front');
-    $backPreview = $service->renderTemplate($template, $student, $organization, $theme, 'back');
+    if ($isCertificateTemplate) {
+        $certificatePreview = array_merge($student, [
+            'certificate_number' => 'NDC-CERT-2026-000001',
+            'programme_code' => 'ICT',
+            'programme_name' => 'Information and Communication Technology',
+            'issued_at' => '2026-09-20',
+        ]);
+        $frontPreview = $service->renderCertificateTemplate($template, $certificatePreview, $organization, 'https://ndc.edu/verify.php?credential=certificate&token=preview');
+    } else {
+        $frontPreview = $service->renderTemplate($template, $student, $organization, $theme, 'front');
+        $backPreview = $service->renderTemplate($template, $student, $organization, $theme, 'back');
+    }
 }
 ?><!DOCTYPE html>
 <html lang="en">
@@ -168,6 +198,7 @@ if ($template !== null && is_array($template)) {
         body { background: #f6f8fb; }
         .preview-frame { border: 1px solid #d9e2ef; border-radius: 12px; background: #fff; min-height: 360px; padding: 16px; overflow:auto; display:block; }
         .preview-card-shell { width:856px; height:540px; margin:0 auto; }
+        .preview-certificate-shell { width:1056px; min-height:744px; margin:0 auto; }
         .preview-frame .ndc-id-card-wrapper { box-shadow: 0 10px 30px rgba(0,0,0,0.08); width:856px !important; height:540px !important; min-width:856px !important; min-height:540px !important; max-width:856px !important; max-height:540px !important; aspect-ratio:856/540 !important; display:block !important; }
         .preview-frame .ndc-id-card-wrapper > * { box-sizing:border-box; }
         .guide-card { border-left: 4px solid #0d6efd; }
@@ -193,7 +224,7 @@ if ($template !== null && is_array($template)) {
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
             <h1 class="h3 mb-1">Template Designer</h1>
-            <p class="text-muted mb-0">Create and manage custom HTML/CSS ID card templates.</p>
+            <p class="text-muted mb-0">Create and manage secure ID card and academic certificate templates.</p>
         </div>
         <a href="students.php" class="btn btn-outline-secondary">Back to students</a>
     </div>
@@ -218,11 +249,12 @@ if ($template !== null && is_array($template)) {
             <div class="card-body d-flex justify-content-between align-items-center">
                 <div>
                     <h2 class="h5 mb-1">Templates</h2>
-                    <p class="text-muted mb-0">Manage unlimited front and back card layouts without changing source code.</p>
+                    <p class="text-muted mb-0">Manage reusable ID card and one-page certificate layouts without changing source code.</p>
                 </div>
                 <div class="btn-group" role="group">
                     <a href="settings.php" class="btn btn-outline-secondary">Settings</a>
-                    <a href="template-designer.php?edit=new" class="btn btn-primary">Create New Template</a>
+                    <a href="template-designer.php?edit=new" class="btn btn-outline-primary">Create ID Card Template</a>
+                    <a href="template-designer.php?edit=new&amp;type=certificate" class="btn btn-primary">Create Certificate Template</a>
                 </div>
             </div>
         </div>
@@ -258,8 +290,9 @@ if ($template !== null && is_array($template)) {
                                         <p class="text-muted small mb-0"><?= htmlspecialchars((string) ($item['description'] ?? ''), ENT_QUOTES, 'UTF-8') ?></p>
                                     </div>
                                     <div class="text-end">
+                                        <span class="badge text-bg-info"><?= htmlspecialchars(($item['document_type'] ?? 'id_card') === 'certificate' ? 'Certificate' : 'ID card', ENT_QUOTES, 'UTF-8') ?></span>
                                         <span class="badge text-bg-secondary"><?= htmlspecialchars((string) ($item['status'] ?? 'draft'), ENT_QUOTES, 'UTF-8') ?></span>
-                                        <?php if (($item['id'] ?? '') === $defaultTemplateId): ?>
+                                        <?php if (($item['id'] ?? '') === (($item['document_type'] ?? 'id_card') === 'certificate' ? $defaultCertificateTemplateId : $defaultTemplateId)): ?>
                                             <span class="badge bg-success">Default</span>
                                         <?php endif; ?>
                                     </div>
@@ -276,7 +309,8 @@ if ($template !== null && is_array($template)) {
                                     <form method="post" class="d-inline">
                                         <input type="hidden" name="action" value="set_default">
                                         <input type="hidden" name="template_id" value="<?= htmlspecialchars((string) ($item['id'] ?? ''), ENT_QUOTES, 'UTF-8') ?>">
-                                        <button class="btn btn-outline-warning btn-sm" type="submit" <?= (($item['id'] ?? '') === $defaultTemplateId) ? 'disabled' : '' ?>>Set Default</button>
+                                        <input type="hidden" name="document_type" value="<?= htmlspecialchars((string) ($item['document_type'] ?? 'id_card'), ENT_QUOTES, 'UTF-8') ?>">
+                                        <button class="btn btn-outline-warning btn-sm" type="submit" <?= (($item['id'] ?? '') === (($item['document_type'] ?? 'id_card') === 'certificate' ? $defaultCertificateTemplateId : $defaultTemplateId)) ? 'disabled' : '' ?>>Set Default</button>
                                     </form>
                                     <form method="post" class="d-inline" onsubmit="return confirm('Delete this template?');">
                                         <input type="hidden" name="action" value="delete">
@@ -304,15 +338,15 @@ if ($template !== null && is_array($template)) {
                     <div class="col-lg-6">
                         <h3 class="h6">Front Preview</h3>
                         <div class="preview-frame">
-                            <div class="preview-card-shell"><?= $frontPreview ?></div>
+                            <div class="<?= $isCertificateTemplate ? 'preview-certificate-shell' : 'preview-card-shell' ?>"><?= $frontPreview ?></div>
                         </div>
                     </div>
-                    <div class="col-lg-6">
+                    <?php if (!$isCertificateTemplate): ?><div class="col-lg-6">
                         <h3 class="h6">Back Preview</h3>
                         <div class="preview-frame">
                             <div class="preview-card-shell"><?= $backPreview ?></div>
                         </div>
-                    </div>
+                    </div><?php endif; ?>
                 </div>
             </div>
         </div>
@@ -339,6 +373,13 @@ if ($template !== null && is_array($template)) {
                                     <select name="status" class="form-select">
                                         <option value="draft" <?= (($template['status'] ?? 'draft') === 'draft') ? 'selected' : '' ?>>Draft</option>
                                         <option value="active" <?= (($template['status'] ?? 'draft') === 'active') ? 'selected' : '' ?>>Active</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Template Type</label>
+                                    <select name="document_type" class="form-select">
+                                        <option value="id_card" <?= (($template['document_type'] ?? 'id_card') === 'id_card') ? 'selected' : '' ?>>Student ID Card</option>
+                                        <option value="certificate" <?= (($template['document_type'] ?? '') === 'certificate') ? 'selected' : '' ?>>Academic Certificate (one page)</option>
                                     </select>
                                 </div>
                                 <div class="col-12">
@@ -500,8 +541,9 @@ if ($template !== null && is_array($template)) {
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/addon/edit/closebrackets.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/addon/edit/matchbrackets.min.js"></script>
 <script>
-    const previewCardWidth = 856;
-    const previewCardHeight = 540;
+    const isCertificateTemplate = <?= $isCertificateTemplate ? 'true' : 'false' ?>;
+    const previewCardWidth = isCertificateTemplate ? 1056 : 856;
+    const previewCardHeight = isCertificateTemplate ? 744 : 540;
 
     function syncPreviewScales() {
         document.querySelectorAll('.preview-frame').forEach(frame => {
@@ -576,6 +618,7 @@ if ($template !== null && is_array($template)) {
         'organization.phone': <?= json_encode($organization['phone'] ?? '+265 999 000 000', JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>,
         'organization.email': <?= json_encode($organization['email'] ?? 'info@ndc.edu', JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>,
         'organization.website': <?= json_encode($organization['website'] ?? 'https://ndc.edu', JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>,
+        'organization.logo': <?= json_encode($service->renderImageTag($organization['logo_path'] ?? '', 'Organization logo'), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>,
         'authorized.name': <?= json_encode($organization['authorized_name'] ?? 'Authorized Officer', JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>,
         'authorized.signature': <?= json_encode($service->authorizedSignatureHtml($organization['authorized_signature_path'] ?? ''), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>,
         'principal.name': <?= json_encode($organization['authorized_name'] ?? 'Authorized Officer', JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>,
@@ -587,6 +630,10 @@ if ($template !== null && is_array($template)) {
         'template.front_background': <?= json_encode($service->renderBackgroundImageTag($template['front_background_path'] ?? ''), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>,
         'template.back_background': <?= json_encode($service->renderBackgroundImageTag($template['back_background_path'] ?? ''), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>,
         'card.qr_code': '<div style="display:inline-flex;align-items:center;justify-content:center;width:90px;height:90px;border:2px dashed #999;font-size:11px;color:#666;">QR</div>',
+        'certificate.number': 'NDC-CERT-2026-000001',
+        'certificate.issue_date': '20 September 2026',
+        'certificate.verification_url': 'https://ndc.edu/verify.php?credential=certificate&token=preview',
+        'certificate.qr_code': '<div style="display:inline-flex;align-items:center;justify-content:center;width:82px;height:82px;border:2px dashed #999;font-size:11px;color:#666;">QR</div>',
         'card.barcode': '<div style="display:inline-flex;align-items:center;justify-content:center;width:140px;height:44px;border:2px dashed #999;font-size:11px;color:#666;">Barcode</div>',
         'card.serial_number': <?= json_encode($student['student_number'] ?? 'BND001', JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>,
         'card.verification_code': <?= json_encode($student['student_number'] ?? 'BND001', JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>,

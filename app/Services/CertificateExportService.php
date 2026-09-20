@@ -2,6 +2,8 @@
 
 namespace App\Services;
 
+require_once dirname(__DIR__) . '/TemplateDesigner/TemplateDesignerService.php';
+
 use Mpdf\Mpdf;
 use RuntimeException;
 
@@ -31,25 +33,27 @@ final class CertificateExportService
         try {
             $mpdf = new Mpdf([
                 'format' => 'A4-L',
-                'margin_left' => 14,
-                'margin_right' => 14,
-                'margin_top' => 14,
-                'margin_bottom' => 14,
+                'margin_left' => 0,
+                'margin_right' => 0,
+                'margin_top' => 0,
+                'margin_bottom' => 0,
                 'tempDir' => sys_get_temp_dir(),
             ]);
             $mpdf->SetTitle('Certificate - ' . (string) $certificate['certificate_number']);
             $mpdf->SetAuthor($organization);
             $mpdf->SetSubject('Academic Certificate');
-            $mpdf->WriteHTML($this->html(
-                $organization,
-                $schoolName,
-                $studentName,
-                $qualification,
-                (string) ($certificate['programme_code'] ?? ''),
-                (string) ($certificate['certificate_number'] ?? ''),
-                $issueDate,
-                $verificationUrl
-            ));
+            $designer = new \TemplateDesignerService();
+            $template = $designer->getDefaultTemplate('certificate');
+            if (!is_array($template) || ($template['document_type'] ?? 'certificate') !== 'certificate') {
+                $template = ['front_html' => $designer->defaultCertificateHtml()];
+            }
+            $mpdf->WriteHTML($designer->renderCertificateTemplate($template, $certificate, [
+                'name' => $organization,
+                'school_name' => $schoolName,
+                'logo_path' => (string) ($settings['organization_logo_path'] ?? ''),
+                'authorized_name' => (string) ($settings['principal_signature_name'] ?? $settings['authorized_name'] ?? 'Authorized Officer'),
+                'authorized_signature_path' => (string) ($settings['principal_signature_path'] ?? $settings['authorized_signature_path'] ?? ''),
+            ], $verificationUrl));
         } catch (\Throwable $exception) {
             throw new RuntimeException('Failed to generate the certificate PDF: ' . $exception->getMessage(), 0, $exception);
         }

@@ -1,0 +1,93 @@
+<style>
+  body { font-family: dejavusans, sans-serif; color: #251316; }
+  .certificate {
+    width: 263mm;
+    position: relative;
+    background: #ffffff;
+    border: 2.2mm solid #102f5c;
+    outline: .55mm solid #d5a928;
+    outline-offset: -5mm;
+    padding: 6mm 12mm;
+    box-sizing: border-box;
+    text-align: center;
+  }
+  .certificate:before, .certificate:after {
+    content: '';
+    position: absolute;
+    width: 28mm;
+    height: 28mm;
+    border-color: #d5a928;
+    border-style: solid;
+  }
+  .certificate:before { left: 4mm; top: 4mm; border-width: 1.2mm 0 0 1.2mm; }
+  .certificate:after { right: 4mm; bottom: 4mm; border-width: 0 1.2mm 1.2mm 0; }
+  .microprint {
+    color: #102f5c;
+    font-size: 5pt;
+    letter-spacing: 1pt;
+    white-space: nowrap;
+  }
+  .top-rule, .bottom-rule { height: .8mm; background: #102f5c; margin: 1mm 0; }
+  .logo { width: 19mm; height: 19mm; object-fit: contain; }
+  .org {
+    color: #102f5c;
+    font-family: dejavuserif, serif;
+    font-size: 15pt;
+    font-weight: bold;
+    letter-spacing: .7pt;
+  }
+  .school {
+    color: #5f6878;
+    font-size: 8pt;
+    letter-spacing: 1.4pt;
+    text-transform: uppercase;
+  }
+  .title { margin: 4mm 0 1mm;
+    color: #102f5c;
+    font-family: dejavuserif, serif;
+    font-size: 25pt;
+    font-weight: bold;
+    letter-spacing: 2.4pt;
+  }
+  .subtitle { color: #b18416; font-size: 8.5pt; letter-spacing: 1.8pt;
+    text-transform: uppercase;
+  }
+  .statement { margin: 2mm auto; max-width: 210mm;
+    font-family: dejavuserif, serif;
+    font-size: 10.5pt;
+    line-height: 1.35;
+  }
+  .name { margin: 3mm auto 2mm; padding-bottom: 2mm; width: 180mm;
+    padding-bottom: 2mm;
+    color: #102f5c;
+    border-bottom: .45mm solid #d5a928;
+    font-family: dejavuserif, serif;
+    font-size: 22pt;
+    font-weight: bold;
+  }
+  .qualification { margin: 2mm auto; max-width: 215mm;
+    color: #102f5c;
+    font-family: dejavuserif, serif;
+    font-size: 15pt;
+    font-weight: bold;
+  }
+  .watermark { position: absolute; left: 28mm; top: 94mm; width: 210mm; color: #102f5c; opacity: .045; font-family: dejavuserif, serif; font-size: 31pt; font-weight: bold; letter-spacing: 3pt; transform: rotate(-24deg); }
+  .meta { color: #4f5d73; font-size: 8pt; line-height: 1.55;
+    text-align: left;
+  }
+  .signature { border-top: .35mm solid #5f6878; width: 55mm; margin: 3mm auto 0; padding-top: 1.5mm; font-size: 7.5pt; }
+  .seal { display: inline-block; width: 16mm; height: 16mm; border: .8mm double #d5a928; border-radius: 50%; color: #102f5c; font-family: dejavuserif, serif; font-size: 6pt; font-weight: bold; line-height: 16mm; text-align: center; }
+</style>
+
+<div class="certificate">
+  <div class="watermark">OFFICIAL &bull; VERIFIED &bull; CREDENTIAL</div>
+  <div class="microprint">{{certificate.number}} &bull; {{certificate.number}} &bull; {{certificate.number}} &bull; {{certificate.number}}</div>
+  <div class="top-rule"></div>
+  <table width="100%"><tr><td width="20%" align="left"><img class="logo" src="{{organization.logo}}" alt="Organization logo"></td><td width="60%"><div class="org">{{organization.name}}</div><div class="school">{{organization.school_name}}</div></td><td width="20%" align="right"><span class="seal">OFFICIAL<br>SEAL</span></td></tr></table>
+  <div class="title">CERTIFICATE</div><div class="subtitle">Academic Achievement</div>
+  <div class="statement">This certifies that</div><div class="name">{{student.full_name}}</div>
+  <div class="statement">has successfully satisfied the academic requirements for</div><div class="qualification">{{student.qualification}}</div>
+  <div class="statement">Programme: {{student.program}}</div>
+  <table width="100%" style="margin-top:3mm"><tr><td width="50%" class="meta">Certificate No: <b>{{certificate.number}}</b><br>Issued: {{certificate.issue_date}}<br>Verify this credential by scanning the QR code.</td><td width="25%" align="center">{{certificate.qr_code}}</td><td width="25%" align="center"><div>{{authorized.signature}}</div><div class="signature">{{authorized.name}}</div></td></tr></table>
+  <div class="bottom-rule"></div><div class="microprint">AUTHENTICITY IS CONFIRMED ONLY THROUGH THE OFFICIAL QR VERIFICATION RECORD</div>
+</div>

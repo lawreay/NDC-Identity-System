@@ -242,15 +242,15 @@ final class TemplateDesignerService
         return ['template' => $metadata];
     }
 
-    public function setDefaultTemplate(string $templateId): void
+    public function setDefaultTemplate(string $templateId, string $documentType = 'id_card'): void
     {
-        $defaultFile = $this->defaultTemplatePath();
+        $defaultFile = $this->defaultTemplatePath($documentType);
         file_put_contents($defaultFile, json_encode(['default' => $templateId], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
     }
 
-    public function getDefaultTemplateId(): ?string
+    public function getDefaultTemplateId(string $documentType = 'id_card'): ?string
     {
-        $defaultFile = $this->defaultTemplatePath();
+        $defaultFile = $this->defaultTemplatePath($documentType);
         if (!is_file($defaultFile)) {
             return null;
         }
@@ -263,9 +263,9 @@ final class TemplateDesignerService
         return (string) $decoded['default'];
     }
 
-    public function getDefaultTemplate(): ?array
+    public function getDefaultTemplate(string $documentType = 'id_card'): ?array
     {
-        $templateId = $this->getDefaultTemplateId();
+        $templateId = $this->getDefaultTemplateId($documentType);
         if ($templateId === null) {
             return null;
         }
@@ -273,9 +273,75 @@ final class TemplateDesignerService
         return $this->getTemplate($templateId);
     }
 
-    private function defaultTemplatePath(): string
+    private function defaultTemplatePath(string $documentType): string
     {
-        return dirname($this->storagePath) . DIRECTORY_SEPARATOR . 'default_template.json';
+        return dirname($this->storagePath) . DIRECTORY_SEPARATOR
+            . ($documentType === 'certificate' ? 'default_certificate_template.json' : 'default_template.json');
+    }
+
+    /** @param array<string, mixed> $certificate @param array<string, mixed> $organization */
+    public function renderCertificateTemplate(array $template, array $certificate, array $organization, string $verificationUrl): string
+    {
+        $studentName = trim((string) ($certificate['first_name'] ?? '') . ' ' . (string) ($certificate['last_name'] ?? ''));
+        $issueDate = date('d F Y', strtotime((string) ($certificate['issued_at'] ?? 'now')));
+        $qualification = trim((string) ($certificate['qualification'] ?? '')) ?: (string) ($certificate['programme_name'] ?? '');
+        $payload = (string) ($template['front_html'] ?? $this->defaultCertificateHtml());
+        $replacements = [
+            'organization.logo' => $this->renderImageTag((string) ($organization['logo_path'] ?? ''), 'Organization logo'),
+            'organization.name' => htmlspecialchars((string) ($organization['name'] ?? 'NDC Identity System'), ENT_QUOTES, 'UTF-8'),
+            'organization.school_name' => htmlspecialchars((string) ($organization['school_name'] ?? $organization['name'] ?? 'NDC Identity System'), ENT_QUOTES, 'UTF-8'),
+            'authorized.signature' => $this->authorizedSignatureHtml((string) ($organization['authorized_signature_path'] ?? '')),
+            'authorized.name' => htmlspecialchars((string) ($organization['authorized_name'] ?? 'Authorized Officer'), ENT_QUOTES, 'UTF-8'),
+            'student.full_name' => htmlspecialchars($studentName, ENT_QUOTES, 'UTF-8'),
+            'student.student_id' => htmlspecialchars((string) ($certificate['student_number'] ?? ''), ENT_QUOTES, 'UTF-8'),
+            'student.qualification' => htmlspecialchars($qualification, ENT_QUOTES, 'UTF-8'),
+            'student.program' => htmlspecialchars((string) ($certificate['programme_code'] ?? '') . ' - ' . (string) ($certificate['programme_name'] ?? ''), ENT_QUOTES, 'UTF-8'),
+            'certificate.number' => htmlspecialchars((string) ($certificate['certificate_number'] ?? ''), ENT_QUOTES, 'UTF-8'),
+            'certificate.issue_date' => htmlspecialchars($issueDate, ENT_QUOTES, 'UTF-8'),
+            'certificate.verification_url' => htmlspecialchars($verificationUrl, ENT_QUOTES, 'UTF-8'),
+            'certificate.qr_code' => '<barcode code="' . htmlspecialchars($verificationUrl, ENT_QUOTES, 'UTF-8') . '" type="QR" size="1.0" error="M" disableborder="1" />',
+        ];
+        foreach ($replacements as $tag => $value) {
+            $payload = str_replace('{{' . $tag . '}}', $value, $payload);
+        }
+
+        return $this->renderTemplateAssetsForExport($payload);
+    }
+
+    public function defaultCertificateHtml(): string
+    {
+        return <<<'HTML'
+<style>
+  body { font-family: dejavusans, sans-serif; color: #251316; }
+  .certificate { width: 263mm; position: relative; background: #fffdf8; border: 2.2mm solid #a51c30; outline: .55mm solid #c9a227; outline-offset: -5mm; padding: 6mm 12mm; box-sizing: border-box; text-align: center; }
+  .microprint { color: #a51c30; font-size: 5pt; letter-spacing: 1pt; white-space: nowrap; }
+  .top-rule, .bottom-rule { height: .8mm; background: #a51c30; margin: 1mm 0; }
+  .logo { width: 19mm; height: 19mm; object-fit: contain; }
+  .org { color: #a51c30; font-family: dejavuserif, serif; font-size: 15pt; font-weight: bold; letter-spacing: .7pt; }
+  .school { color: #6b5c35; font-size: 8pt; letter-spacing: 1.4pt; text-transform: uppercase; }
+  .title { margin: 4mm 0 1mm; color: #a51c30; font-family: dejavuserif, serif; font-size: 25pt; font-weight: bold; letter-spacing: 2.4pt; }
+  .subtitle { color: #6b5c35; font-size: 8.5pt; letter-spacing: 1.8pt; text-transform: uppercase; }
+  .statement { margin: 2mm auto; max-width: 210mm; font-family: dejavuserif, serif; font-size: 10.5pt; line-height: 1.35; }
+  .name { margin: 3mm auto 2mm; padding-bottom: 2mm; width: 180mm; color: #a51c30; border-bottom: .45mm solid #c9a227; font-family: dejavuserif, serif; font-size: 22pt; font-weight: bold; }
+  .qualification { margin: 2mm auto; max-width: 215mm; color: #a51c30; font-family: dejavuserif, serif; font-size: 15pt; font-weight: bold; }
+  .watermark { position: absolute; left: 28mm; top: 94mm; width: 210mm; color: #a51c30; opacity: .055; font-family: dejavuserif, serif; font-size: 31pt; font-weight: bold; letter-spacing: 3pt; transform: rotate(-24deg); }
+  .meta { color: #5c4d2d; font-size: 8pt; line-height: 1.55; text-align: left; }
+  .signature { border-top: .35mm solid #6b5c35; width: 55mm; margin: 3mm auto 0; padding-top: 1.5mm; font-size: 7.5pt; }
+  .seal { display: inline-block; width: 16mm; height: 16mm; border: .8mm double #c9a227; border-radius: 50%; color: #a51c30; font-family: dejavuserif, serif; font-size: 6pt; font-weight: bold; line-height: 16mm; text-align: center; }
+</style>
+<div class="certificate">
+  <div class="watermark">OFFICIAL • VERIFIED • CREDENTIAL</div>
+  <div class="microprint">{{certificate.number}} • {{certificate.number}} • {{certificate.number}} • {{certificate.number}}</div>
+  <div class="top-rule"></div>
+  <table width="100%"><tr><td width="20%" align="left"><img class="logo" src="{{organization.logo}}" alt="Organization logo"></td><td width="60%"><div class="org">{{organization.name}}</div><div class="school">{{organization.school_name}}</div></td><td width="20%" align="right"><span class="seal">OFFICIAL<br>SEAL</span></td></tr></table>
+  <div class="title">CERTIFICATE</div><div class="subtitle">Academic Achievement</div>
+  <div class="statement">This certifies that</div><div class="name">{{student.full_name}}</div>
+  <div class="statement">has successfully satisfied the academic requirements for</div><div class="qualification">{{student.qualification}}</div>
+  <div class="statement">Programme: {{student.program}}</div>
+  <table width="100%" style="margin-top:3mm"><tr><td width="50%" class="meta">Certificate No: <b>{{certificate.number}}</b><br>Issued: {{certificate.issue_date}}<br>Verify this credential by scanning the QR code.</td><td width="25%" align="center">{{certificate.qr_code}}</td><td width="25%" align="center"><div>{{authorized.signature}}</div><div class="signature">{{authorized.name}}</div></td></tr></table>
+  <div class="bottom-rule"></div><div class="microprint">AUTHENTICITY IS CONFIRMED ONLY THROUGH THE OFFICIAL QR VERIFICATION RECORD</div>
+</div>
+HTML;
     }
 
     /**
@@ -390,6 +456,11 @@ final class TemplateDesignerService
     {
         $html = $this->renderTemplate($template, $student, $organization, $theme, $side);
 
+        return $this->renderTemplateAssetsForExport($html);
+    }
+
+    private function renderTemplateAssetsForExport(string $html): string
+    {
         return preg_replace_callback('/(src|href)=("|\')([^"\']+)("|\')/i', function (array $matches): string {
             $path = html_entity_decode($matches[3], ENT_QUOTES, 'UTF-8');
             if (preg_match('~^(data:|https?://|#)~i', $path) === 1) {
@@ -550,12 +621,13 @@ HTML;
         $name = trim((string) ($input['name'] ?? 'Untitled Template'));
         $description = trim((string) ($input['description'] ?? ''));
         $status = trim((string) ($input['status'] ?? 'draft'));
-        $frontHtml = (string) ($input['front_html'] ?? $this->defaultFrontHtml());
-        $backHtml = (string) ($input['back_html'] ?? $this->defaultBackHtml());
-
         $frontBackgroundPath = null;
         $backBackgroundPath = null;
         $currentTemplate = $this->getTemplate($templateId) ?? [];
+        $documentType = (string) ($input['document_type'] ?? ($currentTemplate['document_type'] ?? 'id_card'));
+        $documentType = in_array($documentType, ['id_card', 'certificate'], true) ? $documentType : 'id_card';
+        $frontHtml = (string) ($input['front_html'] ?? ($documentType === 'certificate' ? $this->defaultCertificateHtml() : $this->defaultFrontHtml()));
+        $backHtml = (string) ($input['back_html'] ?? $this->defaultBackHtml());
 
         if (!empty($files['front_background'] ?? null)) {
             $frontBackgroundPath = $this->storeImageUpload($files['front_background'], $directory, 'front-background');
@@ -585,6 +657,7 @@ HTML;
             'front_background_path' => $frontBackgroundPath,
             'back_background_path' => $backBackgroundPath,
             'thumbnail_path' => $this->createThumbnail($directory, $frontBackgroundPath),
+            'document_type' => $documentType,
             'status' => $status,
             'created_by' => (string) ($input['created_by'] ?? 'Administrator'),
             'created_at' => (string) ($input['created_at'] ?? date('Y-m-d H:i:s')),
@@ -938,10 +1011,6 @@ HTML;
 
         if (preg_match('/<script\b|<link\b|<iframe\b|<object\b|<embed\b|<form\b|<input\b|<button\b/i', $sanitized)) {
             $errors[] = 'Only HTML, inline CSS and internal style blocks are allowed in the template. Scripts, forms and linked assets are not supported.';
-        }
-
-        if (preg_match('/\bclass\s*=\s*["\']/i', $sanitized)) {
-            $errors[] = 'Bootstrap classes are not allowed. Use inline styles instead.';
         }
 
         $tagPattern = '/<\/?([a-zA-Z0-9]+)(?:\s[^>]*)?>/';
