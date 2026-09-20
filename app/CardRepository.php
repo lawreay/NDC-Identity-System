@@ -199,7 +199,12 @@ final class CardRepository
         }
 
         $statement = $this->connection->prepare(
-            'SELECT c.id AS card_id, c.student_id, c.guid, c.issued_at, c.expires_at, c.status AS card_status, c.revoked_at,\n                    s.student_number, s.first_name, s.last_name, s.program, s.photo_path, s.status AS student_status\n             FROM student_id_cards c\n             INNER JOIN students s ON s.id = c.student_id\n             WHERE c.guid = :guid\n             LIMIT 1'
+            "SELECT c.id AS card_id, c.student_id, c.guid, c.issued_at, c.expires_at, c.status AS card_status, c.revoked_at,
+                    s.student_number, s.first_name, s.last_name, s.program, s.photo_path, s.status AS student_status
+             FROM student_id_cards c
+             INNER JOIN students s ON s.id = c.student_id
+             WHERE c.guid = :guid
+             LIMIT 1"
         );
         try {
             $statement->execute([':guid' => $guid]);
@@ -220,7 +225,11 @@ final class CardRepository
         $this->ensureSchema();
 
         $statement = $this->connection->prepare(
-            'SELECT id, student_id, guid, issued_at, expires_at, status, revoked_at\n             FROM student_id_cards\n             WHERE student_id = :student_id\n             ORDER BY id DESC\n             LIMIT 1'
+            "SELECT id, student_id, guid, issued_at, expires_at, status, revoked_at
+             FROM student_id_cards
+             WHERE student_id = :student_id
+             ORDER BY id DESC
+             LIMIT 1"
         );
         try {
             $statement->execute([':student_id' => $studentId]);
